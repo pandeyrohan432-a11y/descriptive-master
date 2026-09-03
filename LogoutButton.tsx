@@ -1,0 +1,2 @@
+ "use client";
+export default function LogoutButton(){return <button className="btn outline" style={{marginLeft:10,padding:"7px 10px"}} onClick={async()=>{await fetch("/api/auth/logout",{method:"POST"});location.href="/";}}>Logout</button>}
