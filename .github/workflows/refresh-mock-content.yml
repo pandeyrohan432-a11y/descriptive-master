@@ -1,0 +1,102 @@
+name: Refresh mock content
+on:
+  push:
+    branches: [main]
+permissions:
+  contents: write
+jobs:
+  refresh:
+    if: ${{ !contains(github.event.head_commit.message, '[content-refresh]') }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Replace all mock essay and comprehension content
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re
+
+          p = Path('pages/index.js')
+          s = p.read_text(encoding='utf-8')
+
+          topics = '''const TOPICS=[
+           "India's semiconductor push: building a resilient manufacturing ecosystem",
+           "The future of work in the age of AI: skills, adaptability and human judgement",
+           "Climate-resilient cities: balancing growth, infrastructure and liveability",
+           "Women in the workforce: from participation to leadership",
+           "India's space economy: opportunities beyond traditional government missions",
+           "The gig economy: flexibility, worker protection and the future of employment",
+           "Water security in India: conservation, efficiency and equitable access",
+           "Modern agriculture: technology, productivity and sustainable farming",
+           "Tourism as an engine of local development: infrastructure, culture and responsible travel",
+           "Building a stronger public education system in the digital era"
+          ];'''
+
+          passages = '''const PASSAGES=[
+          `India's semiconductor ambitions have moved manufacturing capability from a specialised industrial issue to a strategic economic priority. A modern electronics ecosystem requires much more than a fabrication plant. It depends on reliable power and water, skilled engineers, specialised suppliers, testing and packaging facilities, logistics and predictable policy. Building these capabilities can take years because semiconductor production relies on tightly coordinated stages and high-quality inputs. The opportunity is significant because electronics demand is expanding across vehicles, communications equipment, appliances and industrial systems. Yet a race for capacity should not become a race for subsidies without attention to long-term competitiveness. Training people for specialised roles, encouraging supplier networks and improving research links with universities can create capabilities that remain useful beyond one project. Diversifying supply chains can also improve resilience when disruptions occur elsewhere. The broader lesson is that strategic manufacturing succeeds when infrastructure, skills, technology and private investment develop together. A semiconductor ecosystem is therefore not simply a factory; it is a network of capabilities that must become efficient enough to compete globally.`,
+          `Artificial intelligence is changing the nature of work more gradually than headlines sometimes suggest. Some tasks are being automated, while other jobs are being redesigned around tools that help people analyse information, draft content or complete routine processes. This creates both opportunities and anxiety. Workers who can combine domain knowledge with new technology may become more productive, but people whose skills are closely tied to repetitive tasks may need to retrain. The challenge is not to predict one fixed list of jobs that will survive, because technology and business models continue to evolve. Instead, education and employers need to make continuous learning easier. Human judgement also remains important where decisions involve context, responsibility, negotiation or empathy. Organisations that introduce AI without changing training and accountability may gain speed without gaining durable capability. A sensible transition therefore combines technological adoption with skill development, worker mobility and clear responsibility for important decisions. The future of work is likely to reward adaptability more than any single technical skill.`,
+          `As cities expand, climate risks can turn ordinary infrastructure weaknesses into major disruptions. Heavy rainfall can overwhelm drainage, extreme heat can reduce outdoor productivity and water stress can affect households and businesses at the same time. Climate resilience therefore cannot be treated as a separate environmental project. It has to be built into roads, housing, drainage, public transport, electricity systems and urban planning. Nature-based measures such as wetlands, urban trees and permeable surfaces can complement engineered infrastructure by reducing heat and managing water. Yet resilience also has a social dimension. Low-income neighbourhoods may face greater exposure while having fewer resources to recover from disruption. City planning must therefore consider who benefits from investment and who bears the risks. Better data can help authorities identify vulnerable locations, but data is useful only when it leads to maintenance and practical action. A resilient city is not one that prevents every climate event; it is one that reduces avoidable damage and recovers quickly while keeping essential services accessible.`,
+          `Increasing women's participation in the workforce is not only a question of fairness; it also affects household incomes, productivity and the size of the talent pool available to an economy. Participation, however, can remain constrained by unpaid care responsibilities, unsafe commuting, limited childcare and workplace structures that penalise career breaks. Simply creating more jobs may not remove these barriers. Employers can improve retention through flexible arrangements, predictable schedules and transparent opportunities for advancement, while public policy can strengthen childcare, transport and skills access. There is also a difference between entering the workforce and progressing into decision-making roles. Leadership pathways matter because organisations benefit when talent is represented at different levels. At the same time, workplace flexibility should not become a hidden expectation that some employees are always available. Sustainable participation requires systems that recognise both professional contribution and personal responsibilities. The broader objective is to make employment choices more genuinely available rather than treating low participation as an individual problem alone.`,
+          `The space sector is increasingly connected with activities on Earth rather than being limited to scientific missions. Satellite services support communications, navigation, weather forecasting, agriculture, disaster response and mapping. As launch costs and commercial capabilities change, a wider set of private firms can participate in this ecosystem. This creates opportunities for manufacturing, software, data services and specialised engineering. Yet a growing space economy also needs clear rules about safety, spectrum, liability and the responsible use of space infrastructure. Public institutions remain important because many capabilities have long development cycles and wider national benefits that private markets may not immediately capture. The most useful approach is therefore not to treat public and private activity as competitors. Government can provide research, regulation and foundational infrastructure while companies develop products and services around emerging capabilities. The economic value of space will ultimately depend on how well these different parts of the ecosystem connect with needs on the ground.`,
+          `The gig economy has created flexible ways for people to earn through short-term assignments and platform-mediated work. For some workers, this flexibility makes it easier to combine earning with education, family responsibilities or other occupations. For others, income can be uncertain and the absence of traditional employment benefits can make financial planning difficult. Platform design also influences the relationship because ratings, incentives and automated allocation systems can affect a worker's opportunities without always being easy to understand. The policy challenge is not simply to classify every worker in one category. It is to ensure that flexibility does not become a substitute for basic protection. Access to insurance, timely payments, transparent terms and fair grievance mechanisms can reduce avoidable vulnerability. At the same time, excessive regulation could remove some of the flexibility that attracts workers and customers to platforms. A balanced framework should therefore protect dignity and reasonable security while allowing new forms of work to evolve. The future of platform work will depend on whether flexibility and protection can coexist.`,
+          `Water security is increasingly a question of management as much as supply. Rainfall can be uneven, groundwater can be overused and urban demand can rise rapidly as populations grow. Building more supply without improving efficiency may postpone rather than solve the problem. Agriculture is especially important because irrigation practices can strongly influence water demand. Better crop choices, efficient irrigation and improved soil management can reduce pressure while protecting farm incomes when supported appropriately. Cities can contribute through leakage control, wastewater treatment, rainwater harvesting and sensible pricing structures. Yet conservation measures must be designed carefully because water is an essential service and poor households cannot be expected to absorb disproportionate costs. Reliable local data is also important because groundwater and surface-water conditions vary widely between regions. Water security therefore requires coordination across agriculture, cities, industry and ecosystems. The most durable solution is one that treats every unit of water as a resource whose use should create the greatest sustainable value.`,
+          `Technology is changing agriculture through sensors, satellite imagery, weather information, improved irrigation and data-driven decision-making. These tools can help farmers use inputs more precisely and respond earlier to crop stress. However, technology does not automatically solve agricultural problems. Small and marginal farmers may face high upfront costs, limited connectivity or difficulty interpreting digital recommendations. Services must therefore be designed around actual farm conditions rather than assuming that every user has the same resources. Local extension support can help translate information into practical decisions, while cooperatives and shared-service models can reduce the cost of specialised equipment. Sustainability is equally important because higher short-term output can become costly if soil, groundwater or biodiversity are damaged. The goal of modern agriculture should consequently be productivity with resilience. Technology is most valuable when it helps farmers make better decisions without creating a new dependence on expensive or opaque systems.`,
+          `Tourism can create jobs and income beyond major urban centres because visitors spend on accommodation, transport, food, crafts and local experiences. The benefits, however, are not automatic. Poor infrastructure can reduce visitor satisfaction, while uncontrolled growth can strain water, waste systems, heritage sites and local communities. Small businesses may also struggle to compete if tourism becomes dominated by a few large operators. Responsible tourism therefore requires planning that connects visitor demand with local capacity. Protecting cultural and natural assets is not merely an environmental concern; those assets are often the foundation of the destination's appeal. Digital promotion can bring attention to lesser-known places, but sudden popularity can create its own pressures. Local participation is important so that residents have a voice in how tourism develops and can capture a fair share of the value. A successful tourism strategy should therefore measure not only visitor numbers but also local income, conservation outcomes and the quality of life of residents.`,
+          `Public education systems face a different challenge in the digital era: access to information has expanded, but access to effective learning remains unequal. A student may have a smartphone and still lack a quiet study space, reliable connectivity, guidance or confidence in evaluating online material. Technology can support teachers through digital resources and personalised practice, but it cannot replace the relationships and judgement that good teaching requires. Schools also need to help students distinguish credible information from misleading or manipulated content. This makes digital literacy part of education rather than an optional extra. At the same time, introducing devices without teacher training or maintenance can produce expensive equipment with limited educational value. The stronger approach combines capable teachers, good foundational skills, carefully chosen technology and support for students who face additional barriers. The purpose of digital education should not be to make classrooms look modern; it should be to improve learning outcomes while keeping education inclusive and human-centred.`
+          ];'''
+
+          questions = '''const QUESTIONS=[
+           ["Why is a semiconductor ecosystem broader than a fabrication plant?","Which supporting capabilities are important for semiconductor manufacturing?","Why can subsidy-led expansion be insufficient?","How can skills and supplier networks strengthen competitiveness?","What broader lesson does the passage give about strategic manufacturing?"],
+           ["Why is the future of work difficult to predict precisely?","Which workers may face greater pressure to retrain?","Why does human judgement remain valuable?","What risks arise when AI adoption is not accompanied by training?","What kind of capability is likely to become increasingly important?"],
+           ["How can ordinary infrastructure weaknesses become climate risks?","Why should resilience be included in urban planning?","How can nature-based measures complement engineering?","Why does resilience have a social dimension?","What makes a city genuinely climate-resilient?"],
+           ["Why can higher female workforce participation benefit the economy?","Which barriers can limit women's participation?","Why is entering employment different from progressing into leadership?","How can employers support sustainable participation?","What broader change does the passage seek?"],
+           ["How does the space economy affect activities on Earth?","What opportunities can commercial space activity create?","Why are clear rules important as the sector expands?","Why should public and private activity not be treated simply as competitors?","What will determine the wider economic value of space?"],
+           ["Why does gig work appeal to some workers?","What difficulties can arise from uncertain platform income?","How can platform design affect workers?","Why does the passage favour a balanced regulatory approach?","What condition could make platform work more sustainable?"],
+           ["Why is water security a management issue as well as a supply issue?","How can agriculture reduce pressure on water resources?","Which urban measures can improve water efficiency?","Why must conservation policies consider affordability?","What principle should guide long-term water use?"],
+           ["How can technology improve agricultural decisions?","Why may small farmers face difficulty adopting new tools?","How can shared services reduce adoption barriers?","Why must productivity be considered alongside sustainability?","When is agricultural technology most valuable?"],
+           ["How can tourism benefit local economies?","What problems can uncontrolled tourism create?","Why is local participation important?","Why should visitor numbers not be the only measure of success?","What should a responsible tourism strategy balance?"],
+           ["Why does access to information not guarantee effective digital learning?","What can technology contribute to teaching?","Why can devices alone fail to improve education?","Why is digital literacy now part of education?","What combination does the passage present as a stronger approach?"]
+          ];'''
+
+          def replace_block(src, name, replacement):
+              pattern = rf'const {name}=\['
+              m = re.search(pattern, src)
+              if not m:
+                  raise SystemExit(f'{name} not found')
+              start = m.start()
+              # Find the matching closing ]; by scanning strings/backticks/brackets.
+              i = m.end()-1
+              depth = 0
+              quote = None
+              escape = False
+              while i < len(src):
+                  ch = src[i]
+                  if quote:
+                      if escape:
+                          escape = False
+                      elif ch == '\\':
+                          escape = True
+                      elif ch == quote:
+                          quote = None
+                  else:
+                      if ch in "'\"`": quote = ch
+                      elif ch == '[': depth += 1
+                      elif ch == ']':
+                          depth -= 1
+                          if depth == 0:
+                              j = i + 1
+                              if src[j:j+1] == ';': j += 1
+                              return src[:start] + replacement + src[j:]
+                  i += 1
+              raise SystemExit(f'Could not close {name}')
+
+          s = replace_block(s, 'TOPICS', topics)
+          s = replace_block(s, 'PASSAGES', passages)
+          s = replace_block(s, 'QUESTIONS', questions)
+          p.write_text(s, encoding='utf-8')
+          PY
+          git config user.name github-actions
+          git config user.email github-actions@github.com
+          git add pages/index.js
+          git diff --cached --quiet || git commit -m "[content-refresh] Replace all mock topics and questions"
+          git push
