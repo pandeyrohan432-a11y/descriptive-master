@@ -1,4 +1,4 @@
-name: Set current affairs comprehension
+name: Finalize mock essay and comprehension topics
 on:
   push:
     branches: [main]
@@ -6,25 +6,39 @@ permissions:
   contents: write
 jobs:
   patch:
-    if: "!contains(github.event.head_commit.message, '[current-comprehension]')"
+    if: "!contains(github.event.head_commit.message, '[mock-content-final]')"
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Replace comprehension passages and questions
+      - name: Replace mock topics, passages and questions
         run: |
           python - <<'PY'
           from pathlib import Path
           import re
           p=Path('pages/index.js')
           s=p.read_text(encoding='utf-8')
+          topics=[
+            "Artificial Intelligence: opportunities, risks and responsible adoption",
+            "Digital Banking & Digital Payments: convenience, inclusion and consumer protection",
+            "Cybersecurity & Online Fraud: building a safer digital ecosystem",
+            "Banking & Financial Inclusion: bringing formal finance to every citizen",
+            "Economy & Employment: growth, investment and quality job creation",
+            "Climate Change & Sustainability: development without compromising resilience",
+            "Renewable Energy: scaling clean power while ensuring reliable supply",
+            "Women Empowerment & Workforce Participation: removing barriers to equal opportunity",
+            "Data Privacy & Digital Rights: balancing innovation with individual control",
+            "Gig Economy & Future of Work: flexibility, security and changing careers"
+          ]
+          def q(s): return '"'+s.replace('\\','\\\\').replace('"','\\"')+'"'
+          topic_js='const TOPICS=['+','.join(q(x) for x in topics)+'];'
+          s=re.sub(r'const TOPICS=\[.*?\];',topic_js,s,count=1,flags=re.S)
           d=Path('scripts/current-comprehension-data.txt').read_text(encoding='utf-8')
           passages=[x.strip() for x in re.findall(r'PASSAGE \d+\n(.*?)(?=\n\nPASSAGE \d+|\n\nQUESTION 1)',d,re.S)]
           questions=[x.strip().splitlines() for x in re.findall(r'QUESTION \d+\n(.*?)(?=\n\nQUESTION \d+|\Z)',d,re.S)]
-          if len(passages)!=10 or len(questions)!=10 or any(len(q)!=5 for q in questions):
-              raise SystemExit('Current comprehension data is incomplete')
+          if len(passages)!=10 or len(questions)!=10 or any(len(x)!=5 for x in questions): raise SystemExit('Invalid comprehension data')
           def js(s): return '`'+s.replace('\\','\\\\').replace('`','\\`')+'`'
           passage_js='const PASSAGES=[\n'+',\n'.join(js(x) for x in passages)+'\n];'
-          question_js='const QUESTIONS=[\n'+',\n'.join('['+','.join('"'+q.replace('\\','\\\\').replace('"','\\"')+'"' for q in qs)+']' for qs in questions)+'\n];'
+          question_js='const QUESTIONS=[\n'+',\n'.join('['+','.join(q(x) for x in qs)+']' for qs in questions)+'\n];'
           s=re.sub(r'const PASSAGES=\[.*?\];',passage_js,s,count=1,flags=re.S)
           s=re.sub(r'const QUESTIONS=\[.*?\];',question_js,s,count=1,flags=re.S)
           p.write_text(s,encoding='utf-8')
@@ -33,7 +47,7 @@ jobs:
           git config user.email github-actions@github.com
           git add pages/index.js
           if git diff --cached --quiet; then exit 0; fi
-          git commit -m "[current-comprehension] Add distinct current affairs passages"
+          git commit -m "[mock-content-final] Update essay and current affairs comprehension"
           git fetch origin main
           git rebase origin/main
           git push origin HEAD:main
