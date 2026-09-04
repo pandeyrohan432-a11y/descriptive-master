@@ -1,0 +1,31 @@
+name: Fix mock access paywall
+on:
+  push:
+    branches: [main]
+permissions:
+  contents: write
+jobs:
+  fix:
+    if: ${{ !contains(github.event.head_commit.message, '[paywall-fix]') }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Update mock access logic
+        run: |
+          python - <<'PY'
+          p='pages/index.js'
+          s=open(p,encoding='utf-8').read()
+          old='const available=i=>{const now=new Date();now.setHours(0,0,0,0);return now>=new Date(RELEASE_DATES[i]+"T00:00:00")};'
+          new='const available=i=>i<2;'
+          if old in s:
+              s=s.replace(old,new)
+          s=s.replace('if(!available(n-1))return alert(`Test ${n} will be available on ${fmt(n-1)}.`);','if(n>=3)return alert("Test 1–2 are FREE. Tests 3–10 require ₹49 payment to unlock all 8 tests.");')
+          s=s.replace('disabled={!a}','disabled={false}')
+          s=s.replace('{a?"Start Test":"Locked"}','{a?"Start Test":"Unlock for ₹49"}')
+          open(p,'w',encoding='utf-8').write(s)
+          PY
+          git config user.name github-actions
+          git config user.email github-actions@github.com
+          git add pages/index.js
+          git diff --cached --quiet || git commit -m "[paywall-fix] Make tests 3-10 paid instead of date-locked"
+          git push
