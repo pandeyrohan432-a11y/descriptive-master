@@ -1,4 +1,4 @@
-const MODEL = process.env.GEMINI_EVAL_MODEL || "gemini-3.7-flash";
+const MODEL = process.env.GEMINI_EVAL_MODEL || "gemini-2.5-flash";
 
 function clamp(n, min, max) {
   return Math.max(min, Math.min(max, Number(n) || 0));
