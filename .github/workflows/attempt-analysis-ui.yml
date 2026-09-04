@@ -1,0 +1,37 @@
+name: Improve completed test analysis flow
+on:
+  push:
+    branches: [main]
+permissions:
+  contents: write
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Update completed test flow
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p = Path('pages/index.js')
+          s = p.read_text(encoding='utf-8')
+
+          old = ' function start(n){if(n>=3&&!accessGranted){setPaywallTest(n);setPaywallStatus(null);setPaywallBusy(false);setView("paywall");return;}setTest(n);setAgree(false);setSection("essay");setEssayLocked(false);setTime(1800);setEssay("");setComp(["","","","",""]);setEvaluation(null);setEvalError("");setShowSolutions(false);setCurrentAttemptId(null);setView("instructions")}\n function reattempt(n){start(n)}\n'
+          new = ''' function start(n,force=false){if(n>=3&&!accessGranted){setPaywallTest(n);setPaywallStatus(null);setPaywallBusy(false);setView("paywall");return;}const existing=readAttempts(n);if(existing.length&&!force){setHistoryTest(n);setTest(n);setAttemptHistory(existing.sort((a,b)=>new Date(a.submittedAt)-new Date(b.submittedAt)));setView("history");return;}setTest(n);setAgree(false);setSection("essay");setEssayLocked(false);setTime(1800);setEssay("");setComp(["","","","",""]);setEvaluation(null);setEvalError("");setShowSolutions(false);setCurrentAttemptId(null);setView("instructions")}\n function reattempt(n){start(n,true)}\n'''
+          if old in s:
+              s = s.replace(old, new, 1)
+          elif 'function start(n,force=false)' not in s:
+              raise SystemExit('start function anchor not found')
+
+          old2 = '<button className="btn outline" onClick={()=>setView("dashboard")}>← Dashboard</button></div>{readAttempts(historyTest)'
+          new2 = '<div style={{display:"flex",gap:8}}><button className="btn outline" onClick={()=>setView("dashboard")}>← Dashboard</button><button className="btn primary" onClick={()=>reattempt(historyTest)}>Reattempt Test</button></div></div>{readAttempts(historyTest)'
+          if old2 in s:
+              s = s.replace(old2, new2, 1)
+
+          p.write_text(s, encoding='utf-8')
+          PY
+          git config user.name github-actions
+          git config user.email github-actions@github.com
+          git add pages/index.js
+          git diff --cached --quiet || git commit -m "[attempt-history] Completed tests open analysis"
+          git push
