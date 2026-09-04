@@ -7,7 +7,8 @@ function getPool(){
   return pool;
 }
 async function ensureTable(){
-  await getPool().query(`CREATE TABLE IF NOT EXISTS dm_access_requests (
+  const db=getPool();
+  await db.query(`CREATE TABLE IF NOT EXISTS dm_access_requests (
     id TEXT PRIMARY KEY,
     phone TEXT NOT NULL,
     name TEXT,
@@ -15,16 +16,16 @@ async function ensureTable(){
     status TEXT NOT NULL DEFAULT 'pending',
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-  );
-  CREATE INDEX IF NOT EXISTS dm_access_phone_idx ON dm_access_requests(phone);
-  CREATE INDEX IF NOT EXISTS dm_access_status_idx ON dm_access_requests(status);`);
+  )`);
+  await db.query(`CREATE INDEX IF NOT EXISTS dm_access_phone_idx ON dm_access_requests(phone)`);
+  await db.query(`CREATE INDEX IF NOT EXISTS dm_access_status_idx ON dm_access_requests(status)`);
 }
 function isAdmin(req){return /(?:^|;\s*)dm_admin=1(?:;|$)/.test(req.headers.cookie||"");}
 
 export default async function handler(req,res){
   try{
-    await ensureTable();
     const db=getPool();
+    await ensureTable();
 
     if(req.method==="GET"){
       if(req.query.admin==="1"){
