@@ -1,0 +1,31 @@
+name: Set result qualification status
+on:
+  push:
+    branches: [main]
+permissions:
+  contents: write
+jobs:
+  patch:
+    if: "!contains(github.event.head_commit.message, '[qualification-status]')"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Update result qualification rules
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p = Path('pages/index.js')
+          s = p.read_text(encoding='utf-8')
+
+          old = 'function Evaluation({evaluation,essay,comp}){const [solutions,setSolutions]=useState(false);const e=evaluation.essay||{},b=e.breakdown||{},c=evaluation.comprehension||[];return <div className="result"><h1>Your Performance</h1>'
+          new = 'function Evaluation({evaluation,essay,comp}){const [solutions,setSolutions]=useState(false);const e=evaluation.essay||{},b=e.breakdown||{},c=evaluation.comprehension||[];const total=Number(evaluation.totalScore)||0;const resultStatus=total<10?"FAIL":total<=15?"Can improve more":"Good";return <div className="result"><h1>Your Performance</h1><div className="panel" style={{marginBottom:18,display:"flex",justifyContent:"space-between",alignItems:"center",gap:15,flexWrap:"wrap"}}><div><b>Qualifying Marks: 10/25</b><div style={{marginTop:6,color:"#667085",fontSize:13}}>10 marks is the minimum qualifying score.</div></div><strong style={{fontSize:20}}>{resultStatus}</strong></div>'
+          if old not in s:
+              raise SystemExit('Evaluation result anchor not found')
+          s = s.replace(old, new, 1)
+          p.write_text(s, encoding='utf-8')
+          PY
+          git config user.name github-actions
+          git config user.email github-actions@github.com
+          git add pages/index.js
+          git diff --cached --quiet || git commit -m "[qualification-status] Set 10 mark qualification"
+          git push
