@@ -39,10 +39,18 @@ jobs:
               '''
               s=s.replace(marker,pay+marker)
 
+          s=s.replace('The evaluator needs the server-side OPENAI_API_KEY to be configured.','The evaluator uses Google Gemini on the server.')
           p.write_text(s,encoding='utf-8')
+
+          q=Path('pages/api/ai-evaluate.js')
+          if q.exists():
+              t=q.read_text(encoding='utf-8')
+              t=t.replace('process.env.GEMINI_EVAL_MODEL || "gemini-3.7-flash"','process.env.GEMINI_EVAL_MODEL || "gemini-2.5-flash"')
+              t=t.replace('OPENAI_API_KEY','GEMINI_API_KEY')
+              q.write_text(t,encoding='utf-8')
           PY
           git config user.name github-actions
           git config user.email github-actions@github.com
-          git add pages/index.js
-          git diff --cached --quiet || git commit -m "[access-fix] Add student access request flow"
+          git add pages/index.js pages/api/ai-evaluate.js
+          git diff --cached --quiet || git commit -m "[access-fix] Remove OpenAI evaluator message"
           git push
