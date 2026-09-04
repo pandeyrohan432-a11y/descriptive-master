@@ -7,7 +7,8 @@ function getPool(){
   return pool;
 }
 async function ensureTable(){
-  await getPool().query(`CREATE TABLE IF NOT EXISTS dm_attempts (
+  const db=getPool();
+  await db.query(`CREATE TABLE IF NOT EXISTS dm_attempts (
     id TEXT PRIMARY KEY,
     phone TEXT NOT NULL,
     name TEXT,
@@ -17,22 +18,21 @@ async function ensureTable(){
     comp_answers JSONB NOT NULL DEFAULT '[]'::jsonb,
     evaluation JSONB,
     error TEXT
-  );
-  CREATE INDEX IF NOT EXISTS dm_attempts_phone_idx ON dm_attempts(phone);
-  CREATE INDEX IF NOT EXISTS dm_attempts_test_idx ON dm_attempts(test_no);
-  CREATE INDEX IF NOT EXISTS dm_attempts_date_idx ON dm_attempts(submitted_at DESC);`);
+  )`);
+  await db.query(`CREATE INDEX IF NOT EXISTS dm_attempts_phone_idx ON dm_attempts(phone)`);
+  await db.query(`CREATE INDEX IF NOT EXISTS dm_attempts_test_idx ON dm_attempts(test_no)`);
+  await db.query(`CREATE INDEX IF NOT EXISTS dm_attempts_date_idx ON dm_attempts(submitted_at DESC)`);
 }
 function isAdmin(req){return /(?:^|;\s*)dm_admin=1(?:;|$)/.test(req.headers.cookie||"");}
 function cleanPhone(v){return String(v||"").replace(/\D/g,"");}
 
 export default async function handler(req,res){
   try{
-    await ensureTable();
     const db=getPool();
+    await ensureTable();
 
     if(req.method==="GET"){
-      if(req.query.admin!=="1") return res.status(401).json({error:"Unauthorized"});
-      if(!isAdmin(req)) return res.status(401).json({error:"Unauthorized"});
+      if(req.query.admin!=="1" || !isAdmin(req)) return res.status(401).json({error:"Unauthorized"});
       const r=await db.query(`SELECT id,phone,name,test_no,submitted_at,essay,comp_answers,evaluation,error FROM dm_attempts ORDER BY submitted_at DESC LIMIT 1000`);
       return res.status(200).json({attempts:r.rows});
     }
