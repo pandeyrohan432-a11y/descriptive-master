@@ -1,0 +1,47 @@
+name: Sync student attempts to admin dashboard
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  patch:
+    if: ${{ !contains(github.event.head_commit.message, '[admin-attempts-sync]') }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Patch student attempt sync
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p=Path('pages/index.js')
+          s=p.read_text()
+          old='''function readAttempts(n){if(typeof window==="undefined"||!phone)return [];try{const x=JSON.parse(localStorage.getItem(`dm_attempts_${phone}_${n}`)||"[]");return Array.isArray(x)?x:[]}catch(e){return []}}\nfunction writeAttempts(n,list){if(typeof window==="undefined"||!phone)return [];localStorage.setItem(`dm_attempts_${phone}_${n}`,JSON.stringify(list))}'''
+          new='''function readAttempts(n){if(typeof window==="undefined"||!phone)return [];try{const x=JSON.parse(localStorage.getItem(`dm_attempts_${phone}_${n}`)||"[]");return Array.isArray(x)?x:[]}catch(e){return []}}\nfunction writeAttempts(n,list){if(typeof window==="undefined"||!phone)return [];localStorage.setItem(`dm_attempts_${phone}_${n}`,JSON.stringify(list))}\nasync function syncAttempt(attempt){try{await fetch("/api/attempts",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({id:attempt.id,phone,name,testNo:attempt.testNo,submittedAt:attempt.submittedAt,essay:attempt.essay,compAnswers:attempt.compAnswers,evaluation:attempt.evaluation||null,error:attempt.error||null})})}catch(e){console.warn("Attempt sync failed",e)}}'''
+          if old not in s: raise SystemExit('attempt storage functions not found')
+          s=s.replace(old,new,1)
+          needle='writeAttempts(test,[...existing,base]);'
+          if needle not in s: raise SystemExit('initial attempt save not found')
+          s=s.replace(needle,needle+'\nsyncAttempt(base);',1)
+          needle2='writeAttempts(test,list);\n      setAttemptHistory(prev=>prev.map(x=>x.id===attemptId?updated:x));'
+          if needle2 not in s: raise SystemExit('evaluation update not found')
+          s=s.replace(needle2,'writeAttempts(test,list);\n      syncAttempt(updated);\n      setAttemptHistory(prev=>prev.map(x=>x.id===attemptId?updated:x));',1)
+          needle3='writeAttempts(test,readAttempts(test).map(x=>x.id===attemptId?updated:x));\n      setAttemptHistory(prev=>prev.map(x=>x.id===attemptId?updated:x));'
+          if needle3 not in s: raise SystemExit('error update not found')
+          s=s.replace(needle3,'writeAttempts(test,readAttempts(test).map(x=>x.id===attemptId?updated:x));\n      syncAttempt(updated);\n      setAttemptHistory(prev=>prev.map(x=>x.id===attemptId?updated:x));',1)
+          p.write_text(s)
+          PY
+      - name: Commit patch
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add pages/index.js
+          if git diff --cached --quiet; then echo "No changes"; exit 0; fi
+          git commit -m "Sync student attempts to admin dashboard [admin-attempts-sync]"
+          git push origin HEAD:main
