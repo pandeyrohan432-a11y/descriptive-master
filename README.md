@@ -34,3 +34,5 @@ The evaluator is intentionally server-side so students cannot inspect or obtain 
 ## Student authentication
 
 The repository also contains the OTP/session starter. Development OTP mode is still separate from production SMS delivery and must be connected to a real SMS provider before public launch.
+
+<!-- paywall trigger -->
