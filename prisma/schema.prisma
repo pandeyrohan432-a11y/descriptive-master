@@ -1,0 +1,30 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Student {
+  id          String   @id @default(cuid())
+  phone       String   @unique
+  name        String?
+  examTarget  String   @default("IBPS PO")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  otps        OtpCode[]
+}
+
+model OtpCode {
+  id         String   @id @default(cuid())
+  studentId  String
+  codeHash   String
+  expiresAt  DateTime
+  attempts   Int      @default(0)
+  used       Boolean  @default(false)
+  createdAt  DateTime @default(now())
+  student    Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  @@index([studentId, expiresAt])
+}
