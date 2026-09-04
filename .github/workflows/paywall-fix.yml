@@ -1,31 +1,48 @@
-name: Fix mock access paywall
+name: Add access request flow
 on:
   push:
     branches: [main]
 permissions:
   contents: write
 jobs:
-  fix:
-    if: ${{ !contains(github.event.head_commit.message, '[paywall-fix]') }}
+  access:
+    if: ${{ !contains(github.event.head_commit.message, '[access-fix]') }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Update mock access logic
+      - name: Patch student access flow
         run: |
           python - <<'PY'
-          p='pages/index.js'
-          s=open(p,encoding='utf-8').read()
-          old='const available=i=>{const now=new Date();now.setHours(0,0,0,0);return now>=new Date(RELEASE_DATES[i]+"T00:00:00")};'
-          new='const available=i=>i<2;'
+          from pathlib import Path
+          p=Path('pages/index.js')
+          s=p.read_text(encoding='utf-8')
+
+          if '[paywallTest,setPaywallTest]' not in s:
+              s=s.replace('[showSolutions,setShowSolutions]=useState(false);', '[showSolutions,setShowSolutions]=useState(false);\n const [paywallTest,setPaywallTest]=useState(3),[paywallStatus,setPaywallStatus]=useState(null),[accessGranted,setAccessGranted]=useState(false),[paywallBusy,setPaywallBusy]=useState(false);')
+
+          if 'view!=="dashboard"||!phone' not in s:
+              needle='useEffect(()=>{if(view!=="exam")return;const id=setInterval(()=>setTime(x=>Math.max(0,x-1)),1000);return()=>clearInterval(id)},[view]);'
+              add='useEffect(()=>{if(view!=="dashboard"||!phone)return;fetch(`/api/access?phone=${encodeURIComponent(phone)}`).then(r=>r.ok?r.json():null).then(d=>{if(d?.accessGranted)setAccessGranted(true)}).catch(()=>{});},[view,phone]);'
+              s=s.replace(needle,needle+'\n '+add)
+
+          old='function start(n){if(n>=3)return alert("Test 1–2 are FREE. Tests 3–10 require ₹49 payment to unlock all 8 tests.");setTest(n);setAgree(false);setSection("essay");setEssayLocked(false);setTime(1800);setEssay("");setComp(["","","","",""]);setEvaluation(null);setEvalError("");setShowSolutions(false);setView("instructions")}'
+          new='''function start(n){if(n>=3&&!accessGranted){setPaywallTest(n);setPaywallStatus(null);setPaywallBusy(false);setView("paywall");return;}setTest(n);setAgree(false);setSection("essay");setEssayLocked(false);setTime(1800);setEssay("");setComp(["","","","",""]);setEvaluation(null);setEvalError("");setShowSolutions(false);setView("instructions")}\n async function requestAccess(){if(paywallBusy)return;setPaywallBusy(true);try{const r=await fetch("/api/access",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({phone,name,testNo:paywallTest})});const j=await r.json();if(!r.ok)throw new Error(j.error||"Unable to send request");setPaywallStatus(j.status||"pending");if(j.accessGranted){setAccessGranted(true);setView("dashboard");}}catch(e){setPaywallStatus(e.message||"Unable to send request");}finally{setPaywallBusy(false)}}'''
           if old in s:
               s=s.replace(old,new)
-          s=s.replace('if(!available(n-1))return alert(`Test ${n} will be available on ${fmt(n-1)}.`);','if(n>=3)return alert("Test 1–2 are FREE. Tests 3–10 require ₹49 payment to unlock all 8 tests.");')
-          s=s.replace('disabled={!a}','disabled={false}')
-          s=s.replace('{a?"Start Test":"Locked"}','{a?"Start Test":"Unlock for ₹49"}')
-          open(p,'w',encoding='utf-8').write(s)
+
+          s=s.replace('const a=available(i);return <div className="card"','const a=available(i)||(i>=2&&accessGranted);return <div className="card"')
+          s=s.replace('{a?<div className="release">Available now</div>:<div className="release">Available on <b>{fmt(i)}</b></div>}<button className="btn primary" style={{width:"100%",marginTop:12}} disabled={false} onClick={()=>start(i+1)}>→ {a?"Start Test":"Unlock for ₹49"}</button>','{a?<div className="release">{i>=2?"Access granted":"Available now"}</div>:<div className="release">Get full access to Tests 3–10</div>}<button className="btn primary" style={{width:"100%",marginTop:12}} disabled={false} onClick={()=>start(i+1)}>→ {a?"Start Test":"Get Access"}</button>')
+
+          if 'if(view==="paywall")return' not in s:
+              marker='if(view==="instructions")return'
+              pay='''if(view==="paywall")return <><style>{css}</style><div className="login" style={{maxWidth:520,textAlign:"center"}}><div className="brand" style={{color:"#40537d"}}>DESCRIPTIVE MASTER</div><h1>Get Access</h1><p style={{color:"#697386"}}>You selected Test {paywallTest}. Complete the purchase shown below, then send your access request.</p><div style={{background:"#f6f8fb",border:"1px solid #dde3eb",borderRadius:14,padding:18,margin:"18px 0"}}><img src="/payment-qr.svg" alt="Payment QR" style={{width:260,maxWidth:"100%",display:"block",margin:"0 auto 12px"}}/><div style={{fontWeight:700}}>Scan the QR to complete the purchase</div><div style={{fontSize:12,color:"#697386",marginTop:5}}>After completing it, use the button below to notify the administrator.</div></div>{paywallStatus==="pending"?<div style={{background:"#fff4d6",color:"#805b00",padding:12,borderRadius:8,fontSize:13}}>✓ Access request sent. Waiting for admin approval.</div>:paywallStatus?<div style={{background:"#fff0f0",color:"#a52727",padding:12,borderRadius:8,fontSize:13}}>{paywallStatus}</div>:<p style={{fontSize:13,color:"#697386"}}>Access to Tests 3–10 will be enabled after the administrator approves your request.</p>}<div style={{display:"flex",gap:10,marginTop:16}}><button className="btn outline" style={{flex:1}} onClick={()=>setView("dashboard")}>Cancel</button><button className="btn primary" style={{flex:1}} disabled={paywallBusy||paywallStatus==="pending"} onClick={requestAccess}>{paywallBusy?"Sending…":"I've Completed It — Request Access"}</button></div></div></>;
+              '''
+              s=s.replace(marker,pay+marker)
+
+          p.write_text(s,encoding='utf-8')
           PY
           git config user.name github-actions
           git config user.email github-actions@github.com
           git add pages/index.js
-          git diff --cached --quiet || git commit -m "[paywall-fix] Make tests 3-10 paid instead of date-locked"
+          git diff --cached --quiet || git commit -m "[access-fix] Add student access request flow"
           git push
