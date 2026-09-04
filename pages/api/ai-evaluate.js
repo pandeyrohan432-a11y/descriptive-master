@@ -1,14 +1,14 @@
-const MODEL = process.env.OPENAI_EVAL_MODEL || "gpt-5.6-luna";
+const MODEL = process.env.GEMINI_EVAL_MODEL || "gemini-3.7-flash";
 
 function clamp(n, min, max) {
   return Math.max(min, Math.min(max, Number(n) || 0));
 }
 
 function normalise(result) {
-  const essay = result.essay || {};
-  const comp = Array.isArray(result.comprehension) ? result.comprehension : [];
+  const essay = result?.essay || {};
+  const comp = Array.isArray(result?.comprehension) ? result.comprehension : [];
   const essayScore = clamp(essay.score, 0, 15);
-  const comprehensionScore = clamp(comp.reduce((sum, x) => sum + clamp(x.score, 0, 2), 0), 0, 10);
+  const comprehensionScore = clamp(comp.slice(0, 5).reduce((sum, x) => sum + clamp(x.score, 0, 2), 0), 0, 10);
   return {
     essayScore: Number(essayScore.toFixed(1)),
     comprehensionScore: Number(comprehensionScore.toFixed(1)),
@@ -37,15 +37,65 @@ function normalise(result) {
       wordCount: Number(x.wordCount) || 0,
       wordLimitStatus: x.wordLimitStatus || ""
     })),
-    overallFeedback: result.overallFeedback || "",
-    keyImprovements: Array.isArray(result.keyImprovements) ? result.keyImprovements : []
+    overallFeedback: result?.overallFeedback || "",
+    keyImprovements: Array.isArray(result?.keyImprovements) ? result.keyImprovements : []
   };
 }
 
+const responseSchema = {
+  type: "OBJECT",
+  properties: {
+    essay: {
+      type: "OBJECT",
+      properties: {
+        score: { type: "NUMBER" },
+        breakdown: {
+          type: "OBJECT",
+          properties: {
+            relevance: { type: "NUMBER" },
+            structure: { type: "NUMBER" },
+            arguments: { type: "NUMBER" },
+            grammar: { type: "NUMBER" },
+            vocabulary: { type: "NUMBER" }
+          },
+          required: ["relevance", "structure", "arguments", "grammar", "vocabulary"]
+        },
+        whatWasGood: { type: "ARRAY", items: { type: "STRING" } },
+        whatWasWrong: { type: "ARRAY", items: { type: "STRING" } },
+        improvements: { type: "ARRAY", items: { type: "STRING" } },
+        modelAnswer: { type: "STRING" }
+      },
+      required: ["score", "breakdown", "whatWasGood", "whatWasWrong", "improvements", "modelAnswer"]
+    },
+    comprehension: {
+      type: "ARRAY",
+      items: {
+        type: "OBJECT",
+        properties: {
+          score: { type: "NUMBER" },
+          studentAnswer: { type: "STRING" },
+          whatWasRight: { type: "STRING" },
+          whatWasWrong: { type: "STRING" },
+          idealAnswer: { type: "STRING" },
+          wordCount: { type: "NUMBER" },
+          wordLimitStatus: { type: "STRING" }
+        },
+        required: ["score", "studentAnswer", "whatWasRight", "whatWasWrong", "idealAnswer", "wordCount", "wordLimitStatus"]
+      }
+    },
+    overallFeedback: { type: "STRING" },
+    keyImprovements: { type: "ARRAY", items: { type: "STRING" } }
+  },
+  required: ["essay", "comprehension", "overallFeedback", "keyImprovements"]
+};
+
 export default async function handler(req, res) {
   if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
-  if (!process.env.OPENAI_API_KEY) {
-    return res.status(503).json({ error: "AI evaluation is not configured. Add OPENAI_API_KEY in the server environment." });
+
+  if (!process.env.GEMINI_API_KEY) {
+    return res.status(503).json({
+      error: "Free AI evaluation is not configured. Add GEMINI_API_KEY in the Vercel server environment."
+    });
   }
 
   const { essayTopic, essay, passage, questions, compAnswers } = req.body || {};
@@ -61,62 +111,53 @@ export default async function handler(req, res) {
     compAnswers: compAnswers.slice(0, 5)
   };
 
-  const system = `You are the senior evaluator for an IBPS PO Mains descriptive test. Evaluate strictly but fairly, like an experienced banking-exam descriptive examiner. The test is 25 marks: Essay 15 + Comprehension 10. Never award marks merely because the student's wording overlaps the passage. Judge meaning, accuracy, relevance, completeness, reasoning, language and clarity. Do not invent facts that are not needed to answer a passage question.
+  const prompt = `You are the senior evaluator for an IBPS PO Mains descriptive test. Evaluate strictly but fairly, like an experienced banking-exam descriptive examiner.
 
-Essay rubric: relevance 4, structure/coherence 3, arguments/depth 3, grammar/language 3, vocabulary/expression 2. The five components must add to the essay score out of 15.
-Comprehension: exactly 5 questions, each out of 2. A strong answer directly answers the question using the passage's meaning in the student's own words. Penalise missing key points, factual distortion, irrelevant material and serious lack of clarity. Word target is 30-40 words per answer; mention the word-count issue but do not let word count alone decide correctness.
+The test is 25 marks: Essay 15 + Comprehension 10.
+Essay rubric: relevance 4, structure/coherence 3, arguments/depth 3, grammar/language 3, vocabulary/expression 2. These five components must add to the essay score out of 15.
+Comprehension has exactly 5 questions, each out of 2. Judge semantic correctness, relevance, completeness and clarity; never award marks merely because wording overlaps the passage.
+Each comprehension answer has a target of 30-40 words. Mention word-count problems, but do not let word count alone decide correctness.
 
-For every comprehension question provide: marks, the student's answer, what was correct, what was missing/wrong, and an ideal 30-40 word answer. For the essay provide what was good, what was wrong, concrete improvements, and a useful model answer of about 250-300 words. The model answer is a learning solution, not something the student must reproduce verbatim.
+For the essay provide: score, rubric breakdown, what was good, what was wrong, concrete improvements, and a useful model answer of about 250-300 words.
+For EVERY comprehension question provide: score, the student's answer, what was correct, what was missing/wrong, and an ideal answer of 30-40 words.
+Also provide overall feedback and key improvements.
 
-Return only JSON matching the supplied schema.`;
+Be specific and educational. Do not invent facts outside the supplied material when evaluating comprehension. Return only JSON matching the supplied response schema.
 
-  const schema = {
-    type: "object",
-    additionalProperties: false,
-    properties: {
-      essay: {
-        type: "object", additionalProperties: false,
-        properties: {
-          score: { type: "number" },
-          breakdown: { type: "object", additionalProperties: false, properties: { relevance: {type:"number"}, structure:{type:"number"}, arguments:{type:"number"}, grammar:{type:"number"}, vocabulary:{type:"number"}}, required:["relevance","structure","arguments","grammar","vocabulary"] },
-          whatWasGood: { type:"array", items:{type:"string"} },
-          whatWasWrong: { type:"array", items:{type:"string"} },
-          improvements: { type:"array", items:{type:"string"} },
-          modelAnswer: { type:"string" }
-        }, required:["score","breakdown","whatWasGood","whatWasWrong","improvements","modelAnswer"]
-      },
-      comprehension: { type:"array", minItems:5, maxItems:5, items:{ type:"object", additionalProperties:false, properties:{ score:{type:"number"}, studentAnswer:{type:"string"}, whatWasRight:{type:"string"}, whatWasWrong:{type:"string"}, idealAnswer:{type:"string"}, wordCount:{type:"number"}, wordLimitStatus:{type:"string"} }, required:["score","studentAnswer","whatWasRight","whatWasWrong","idealAnswer","wordCount","wordLimitStatus"] } },
-      overallFeedback:{type:"string"},
-      keyImprovements:{type:"array",items:{type:"string"}}
-    },
-    required:["essay","comprehension","overallFeedback","keyImprovements"]
-  };
+TEST DATA:
+${JSON.stringify(payload)}`;
 
   try {
-    const response = await fetch("https://api.openai.com/v1/responses", {
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(MODEL)}:generateContent?key=${encodeURIComponent(process.env.GEMINI_API_KEY)}`;
+    const response = await fetch(url, {
       method: "POST",
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${process.env.OPENAI_API_KEY}` },
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        model: MODEL,
-        input: [
-          { role: "system", content: [{ type: "input_text", text: system }] },
-          { role: "user", content: [{ type: "input_text", text: JSON.stringify(payload) }] }
-        ],
-        text: { format: { type: "json_schema", name: "descriptive_evaluation", strict: true, schema } },
-        max_output_tokens: 7000
+        contents: [{ role: "user", parts: [{ text: prompt }] }],
+        generationConfig: {
+          responseMimeType: "application/json",
+          responseSchema,
+          temperature: 0.2,
+          maxOutputTokens: 7000
+        }
       })
     });
 
     const data = await response.json();
-    if (!response.ok) return res.status(response.status).json({ error: data?.error?.message || "OpenAI evaluation failed." });
+    if (!response.ok) {
+      console.error("Gemini evaluation failed", data);
+      return res.status(response.status).json({
+        error: data?.error?.message || "Gemini evaluation failed."
+      });
+    }
 
-    const text = data.output?.flatMap(x => x.content || []).find(x => x.type === "output_text")?.text;
+    const text = data?.candidates?.[0]?.content?.parts?.map(p => p.text || "").join("").trim();
     if (!text) return res.status(502).json({ error: "AI returned no evaluation." });
 
     const evaluation = normalise(JSON.parse(text));
-    return res.status(200).json({ evaluation, model: MODEL });
+    return res.status(200).json({ evaluation, model: MODEL, provider: "Google Gemini Free Tier" });
   } catch (error) {
-    console.error("AI evaluation error", error);
+    console.error("Gemini evaluation error", error);
     return res.status(500).json({ error: "Unable to evaluate this attempt right now." });
   }
 }
