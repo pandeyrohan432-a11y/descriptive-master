@@ -35,8 +35,8 @@ jobs:
           needle3='writeAttempts(test,readAttempts(test).map(x=>x.id===attemptId?updated:x));\n      setAttemptHistory(prev=>prev.map(x=>x.id===attemptId?updated:x));'
           if needle3 not in s: raise SystemExit('error update not found')
           s=s.replace(needle3,'writeAttempts(test,readAttempts(test).map(x=>x.id===attemptId?updated:x));\n      syncAttempt(updated);\n      setAttemptHistory(prev=>prev.map(x=>x.id===attemptId?updated:x));',1)
-          marker='const countWords=s=>(s.trim()?s.trim().split(/\\s+/).length:0);'
-          migration='''useEffect(()=>{if(!phone)return;for(let n=1;n<=10;n++){const saved=readAttempts(n);saved.forEach(syncAttempt)}},[phone]);\n'''
+          marker='useEffect(()=>{if(view!=="dashboard"||!phone)return;'
+          migration='useEffect(()=>{if(!phone)return;for(let n=1;n<=10;n++){const saved=readAttempts(n);saved.forEach(syncAttempt)}},[phone]);\n'
           if marker in s and 'saved.forEach(syncAttempt)' not in s:
               s=s.replace(marker,migration+marker,1)
           p.write_text(s)
