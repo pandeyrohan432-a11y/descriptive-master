@@ -2,9 +2,6 @@ name: Build PRE mock data
 
 on:
   push:
-    paths:
-      - 'data/pre_mock_data.js'
-      - '.github/workflows/build-pre-mock-data.yml'
   workflow_dispatch:
 
 permissions:
