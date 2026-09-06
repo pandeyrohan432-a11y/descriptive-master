@@ -24,7 +24,10 @@ function ChatButton(){
     {admin&&<a href="/admin-chat" style={{background:"#263a61",color:"#fff",textDecoration:"none",padding:"12px 16px",borderRadius:999,boxShadow:"0 5px 18px rgba(25,45,80,.25)",fontWeight:700}}>💬 Student Chats</a>}
   </div>;
 }
-
+function MockButton(){
+  if(typeof window!=="undefined"&&(window.location.pathname.startsWith("/pre-mocks")))return null;
+  return <a href="/pre-mocks" style={{position:"fixed",left:18,bottom:18,zIndex:9998,background:"#172f55",color:"#fff",textDecoration:"none",padding:"12px 16px",borderRadius:999,boxShadow:"0 5px 18px rgba(25,45,80,.25)",fontWeight:800}}>📝 PRE MOCKS</a>;
+}
 export default function App({Component,pageProps}){
   useEffect(()=>{
     const trackLoggedStudent=()=>{
@@ -87,5 +90,5 @@ export default function App({Component,pageProps}){
     if(document.body)observer.observe(document.body,{subtree:true,childList:true,attributes:true,attributeFilter:["disabled","class"]});
     return()=>{clearInterval(loginTimer);clearInterval(timer);observer.disconnect();};
   },[]);
-  return <><Component {...pageProps}/><ChatButton/></>;
+  return <><Component {...pageProps}/><MockButton/><ChatButton/></>;
 }
