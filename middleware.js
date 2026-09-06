@@ -4,7 +4,7 @@ export function middleware(req){
   const {pathname}=req.nextUrl;
   if(pathname==='/pre-mocks/sbi-clerk-mock-1'){
     const url=req.nextUrl.clone();
-    url.pathname='/pre-mocks/sbi-clerk-mock-1-fixed';
+    url.pathname='/pre-mocks/sbi-clerk-mock-1-live';
     return NextResponse.rewrite(url);
   }
   return NextResponse.next();
