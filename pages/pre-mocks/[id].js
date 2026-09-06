@@ -7,7 +7,13 @@ const clean=(s='')=>s.replace(/\s*SBI Clerk 2025 Preliminary Exam Recollected Qu
 export default function MockAttempt(){
  const router=useRouter();
  const [questions,setQuestions]=useState([]),[loading,setLoading]=useState(true),[error,setError]=useState(''),[idx,setIdx]=useState(0),[answers,setAnswers]=useState({}),[marked,setMarked]=useState({}),[seconds,setSeconds]=useState(DURATION),[submitted,setSubmitted]=useState(false),[started,setStarted]=useState(false);
- useEffect(()=>{if(router.query.id!=='sbi-clerk-2025')return;fetch('/api/pre-mock?id=sbi-clerk-2025').then(r=>r.ok?r.json():r.json().then(x=>Promise.reject(new Error(x.error||'Mock load failed')))).then(d=>{if(!Array.isArray(d)||d.length!==100)throw new Error('Invalid mock data');setQuestions(d);setLoading(false)}).catch(e=>{setError(e.message||'Mock could not be loaded');setLoading(false)})},[router.query.id]);
+ useEffect(()=>{
+  if(router.query.id!=='sbi-clerk-2025')return;
+  fetch('/pre_mock_data.json?bust=20260906',{cache:'no-store'})
+   .then(async r=>{const d=await r.json();if(!r.ok)throw new Error(d?.error||'Mock data could not be loaded');return d})
+   .then(d=>{if(!Array.isArray(d)||d.length!==100)throw new Error(`Invalid mock data: expected 100 questions, got ${Array.isArray(d)?d.length:'non-array'}`);setQuestions(d);setLoading(false)})
+   .catch(e=>{setError(e.message||'Mock could not be loaded');setLoading(false)})
+ },[router.query.id]);
  useEffect(()=>{if(!questions.length||submitted)return;try{const x=JSON.parse(localStorage.getItem('dm_pre_sbi_2025_state')||'null');if(x){if(x.answers)setAnswers(x.answers);if(x.marked)setMarked(x.marked);if(Number.isFinite(x.idx))setIdx(Math.min(x.idx,questions.length-1));if(Number.isFinite(x.seconds))setSeconds(x.seconds);if(x.started)setStarted(true)}}catch(e){}},[questions,submitted]);
  useEffect(()=>{if(!started||submitted||!questions.length)return;const t=setInterval(()=>setSeconds(s=>{if(s<=1){clearInterval(t);setSubmitted(true);return 0}return s-1}),1000);return()=>clearInterval(t)},[started,submitted,questions.length]);
  useEffect(()=>{if(questions.length&&!submitted)localStorage.setItem('dm_pre_sbi_2025_state',JSON.stringify({answers,marked,idx,seconds,started}))},[answers,marked,idx,seconds,started,questions.length,submitted]);
