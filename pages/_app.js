@@ -1,5 +1,6 @@
 import {useEffect,useState} from "react";
 import "../globals.css";
+import StudentExperiencePopup from "../components/StudentExperiencePopup";
 
 function ChatButton(){
   const [student,setStudent]=useState(false);
@@ -115,5 +116,5 @@ export default function App({Component,pageProps}){
     if(document.body)observer.observe(document.body,{subtree:true,childList:true,attributes:true,attributeFilter:["disabled","class"]});
     return()=>{clearInterval(loginTimer);clearInterval(timer);observer.disconnect();};
   },[]);
-  return <><Component {...pageProps}/><MockButton/><ProfileButton/><ChatButton/></>;
+  return <><Component {...pageProps}/><MockButton/><ProfileButton/><ChatButton/><StudentExperiencePopup/></>;
 }
