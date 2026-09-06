@@ -2,7 +2,10 @@ import {useState} from 'react';
 
 const exams=[
   {id:'sbi-clerk',name:'SBI Clerk',sub:'Prelims'},
-  {id:'ibps-clerk',name:'IBPS Clerk',sub:'Prelims'}
+  {id:'ibps-clerk',name:'IBPS Clerk',sub:'Prelims'},
+  {id:'rrb-clerk',name:'IBPS RRB Clerk',sub:'Prelims'},
+  {id:'rrb-po',name:'IBPS RRB PO',sub:'Prelims'},
+  {id:'nicl-assistant',name:'NICL Assistant',sub:'Prelims'}
 ];
 
 export default function PreMocks(){
@@ -31,7 +34,7 @@ export default function PreMocks(){
 
       <section style={{background:'#fff',borderRadius:18,padding:'20px 18px',boxShadow:'0 8px 28px rgba(30,55,90,.07)',marginBottom:24}}>
         <h2 style={{fontSize:17,margin:'0 0 16px'}}>Choose Exam</h2>
-        <div style={{display:'grid',gridTemplateColumns:'repeat(2,minmax(160px,260px))',gap:10}}>
+        <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(150px,1fr))',gap:10}}>
           {exams.map(x=><button key={x.id} onClick={()=>setSelected(x.id)} style={{border:selected===x.id?'2px solid #315d9b':'1px solid #e1e7ee',background:selected===x.id?'#eef4ff':'#fff',borderRadius:13,padding:'13px 10px',cursor:'pointer',textAlign:'left'}}>
             <div style={{fontWeight:800,fontSize:14,color:'#24344f'}}>{x.name}</div>
             <div style={{fontSize:11,color:selected===x.id?'#315d9b':'#8792a2',marginTop:4}}>{x.sub}</div>
@@ -54,10 +57,6 @@ export default function PreMocks(){
           <div style={{fontSize:12,color:'#748093',marginBottom:18}}>100 Questions • 60 Minutes • Prelims</div>
           {m.active?<a href="/pre-mocks/sbi-clerk-2025" style={{display:'block',textAlign:'center',background:'#315d9b',color:'#fff',padding:'11px 12px',borderRadius:10,textDecoration:'none',fontWeight:800,fontSize:14}}>Start Mock →</a>:<button disabled style={{width:'100%',background:'#f0f2f5',color:'#9aa4b2',border:0,padding:'11px 12px',borderRadius:10,fontWeight:800,fontSize:14}}>Locked / Coming Soon</button>}
         </div>)}
-      </div>
-
-      <div style={{marginTop:24,background:'#fff8e7',border:'1px solid #f1d58a',borderRadius:13,padding:'13px 15px',fontSize:13,color:'#6b5317',lineHeight:1.5}}>
-        <b>Plan:</b> Har exam ka apna separate section rahega. Ek time par sirf first 8 mocks visible honge; naye mocks baad mein add kiye ja sakte hain bina page ko crowded kiye.
       </div>
     </div>
   </main>;
