@@ -1,9 +1,11 @@
-import fs from 'fs';
-import path from 'path';
 import zlib from 'zlib';
 
-function loadMock(){
-  const file=fs.readFileSync(path.join(process.cwd(),'data','pre_mock_data.js'),'utf8');
+const DATA_URL='https://raw.githubusercontent.com/pandeyrohan432-a11y/descriptive-master/main/data/pre_mock_data.js';
+
+async function loadMock(){
+  const r=await fetch(DATA_URL);
+  if(!r.ok) throw new Error(`Data fetch failed: ${r.status}`);
+  const file=await r.text();
   const match=file.match(/const DATA_B64\s*=\s*`([\s\S]*?)`\s*;/);
   if(!match) throw new Error('Mock data blob not found');
   const json=zlib.gunzipSync(Buffer.from(match[1],'base64')).toString('utf8');
@@ -12,11 +14,11 @@ function loadMock(){
   return data;
 }
 
-export default function handler(req,res){
+export default async function handler(req,res){
   if(req.method!=='GET') return res.status(405).json({error:'Method not allowed'});
   if(req.query.id && req.query.id!=='sbi-clerk-2025') return res.status(404).json({error:'Mock not found'});
   try{
-    const data=loadMock();
+    const data=await loadMock();
     res.setHeader('Cache-Control','public, s-maxage=3600, stale-while-revalidate=86400');
     return res.status(200).json(data);
   }catch(e){
