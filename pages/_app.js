@@ -61,9 +61,29 @@ export default function App({Component,pageProps}){
         }
       });
     };
-    patch();
-    const timer=setInterval(patch,150);
-    const observer=new MutationObserver(patch);
+    const brand=()=>{
+      if(typeof document==="undefined")return;
+      document.querySelectorAll(".brand").forEach(el=>{
+        el.textContent="";
+        el.style.width="180px";
+        el.style.height="52px";
+        el.style.backgroundImage="url('/logo.svg')";
+        el.style.backgroundRepeat="no-repeat";
+        el.style.backgroundPosition="left center";
+        el.style.backgroundSize="contain";
+      });
+      document.querySelectorAll(".top b").forEach(el=>{
+        if(el.dataset.dmLogo==="1")return;
+        el.dataset.dmLogo="1";
+        el.textContent="";
+        const img=document.createElement("img");
+        img.src="/logo.svg";img.alt="Descriptive Master";img.style.height="50px";img.style.width="164px";img.style.objectFit="contain";
+        el.appendChild(img);
+      });
+    };
+    patch();brand();
+    const timer=setInterval(()=>{patch();brand();},150);
+    const observer=new MutationObserver(()=>{patch();brand();});
     if(document.body)observer.observe(document.body,{subtree:true,childList:true,attributes:true,attributeFilter:["disabled","class"]});
     return()=>{clearInterval(loginTimer);clearInterval(timer);observer.disconnect();};
   },[]);
