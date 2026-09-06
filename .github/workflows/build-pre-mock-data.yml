@@ -1,4 +1,4 @@
-name: Restore PRE mock dataset
+name: Build PRE mock static data
 
 on:
   push:
@@ -8,21 +8,44 @@ permissions:
   contents: write
 
 jobs:
-  restore:
+  build:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
       - uses: actions/checkout@v4
         with:
           ref: 06e8eee9c6fa1255fe72c5fdbd3c1cd240e1bc29
           path: old-good
-      - name: Restore known-good mock dataset
+          fetch-depth: 1
+
+      - name: Build static PRE mock JSON
         run: |
-          cp old-good/data/pre_mock_data.js data/pre_mock_data.js
+          node <<'NODE'
+          const fs = require('fs');
+          const zlib = require('zlib');
+          const source = fs.readFileSync('old-good/data/pre_mock_data.js', 'utf8');
+          const match = source.match(/const\s+DATA_B64\s*=\s*`([A-Za-z0-9+/=\s]+)`/);
+          if (!match) throw new Error('DATA_B64 not found in known-good dataset');
+          const json = zlib.gunzipSync(Buffer.from(match[1].replace(/\s/g, ''), 'base64')).toString('utf8');
+          const data = JSON.parse(json);
+          if (!Array.isArray(data) || data.length !== 100) throw new Error(`Expected 100 questions, got ${Array.isArray(data) ? data.length : 'non-array'}`);
+          fs.mkdirSync('public', { recursive: true });
+          fs.writeFileSync('public/pre_mock_data.json', JSON.stringify(data));
+          console.log(`Built public/pre_mock_data.json with ${data.length} questions`);
+          NODE
+
+      - name: Commit static dataset if changed
+        run: |
           rm -rf old-good
-          git add data/pre_mock_data.js
-          git diff --cached --quiet && exit 0
+          git add public/pre_mock_data.json
+          if git diff --cached --quiet; then
+            echo "Static dataset already up to date"
+            exit 0
+          fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git commit -m "Restore known-good SBI Clerk PRE mock dataset"
+          git commit -m "Add static SBI Clerk PRE mock dataset"
           git push
