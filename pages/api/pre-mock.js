@@ -1,9 +1,21 @@
+import fs from 'fs';
+import path from 'path';
 import { loadSbiClerk2025 } from '../../data/pre_mock_data';
+
+export const config = { runtime: 'nodejs' };
 
 export default async function handler(req,res){
   if(req.method!=='GET') return res.status(405).json({error:'Method not allowed'});
   if(req.query.id && req.query.id!=='sbi-clerk-2025') return res.status(404).json({error:'Mock not found'});
   try{
+    const file=path.join(process.cwd(),'public','pre_mock_data.json');
+    if(fs.existsSync(file)){
+      const data=JSON.parse(fs.readFileSync(file,'utf8'));
+      if(Array.isArray(data)&&data.length===100){
+        res.setHeader('Cache-Control','public, s-maxage=3600, stale-while-revalidate=86400');
+        return res.status(200).json(data);
+      }
+    }
     const data=await loadSbiClerk2025();
     if(!Array.isArray(data)||data.length!==100) throw new Error('Invalid mock data');
     res.setHeader('Cache-Control','public, s-maxage=3600, stale-while-revalidate=86400');
