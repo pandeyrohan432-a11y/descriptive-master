@@ -1,4 +1,4 @@
-name: Build PRE mock data
+name: Restore PRE mock dataset
 
 on:
   push:
@@ -8,28 +8,19 @@ permissions:
   contents: write
 
 jobs:
-  build-data:
+  restore:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Generate static PRE mock JSON
+        with:
+          fetch-depth: 0
+      - name: Restore known-good mock dataset
         run: |
-          node <<'NODE'
-          const fs = require('fs');
-          const zlib = require('zlib');
-          const src = fs.readFileSync('data/pre_mock_data.js', 'utf8');
-          const match = src.match(/const DATA_B64\s*=\s*`([\s\S]*?)`;/);
-          if (!match) throw new Error('DATA_B64 not found');
-          const json = zlib.gunzipSync(Buffer.from(match[1], 'base64')).toString('utf8');
-          const data = JSON.parse(json);
-          if (!Array.isArray(data) || data.length !== 100) throw new Error('Expected 100 questions');
-          fs.writeFileSync('public/pre_mock_data.json', JSON.stringify(data));
-          NODE
-      - name: Commit generated data
-        run: |
+          git fetch origin 06e8eee9c6fa1255fe72c5fdbd3c1cd240e1bc29 --depth=1
+          git checkout 06e8eee9c6fa1255fe72c5fdbd3c1cd240e1bc29 -- data/pre_mock_data.js
+          git add data/pre_mock_data.js
+          git diff --cached --quiet && exit 0
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add public/pre_mock_data.json
-          git diff --cached --quiet && exit 0
-          git commit -m "Generate static SBI Clerk PRE mock data"
+          git commit -m "Restore known-good SBI Clerk PRE mock dataset"
           git push
