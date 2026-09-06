@@ -1,0 +1,38 @@
+name: Build PRE mock data
+
+on:
+  push:
+    paths:
+      - 'data/pre_mock_data.js'
+      - '.github/workflows/build-pre-mock-data.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-data:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Generate static PRE mock JSON
+        run: |
+          node <<'NODE'
+          const fs = require('fs');
+          const zlib = require('zlib');
+          const src = fs.readFileSync('data/pre_mock_data.js', 'utf8');
+          const match = src.match(/const DATA_B64\s*=\s*`([\s\S]*?)`;/);
+          if (!match) throw new Error('DATA_B64 not found');
+          const json = zlib.gunzipSync(Buffer.from(match[1], 'base64')).toString('utf8');
+          const data = JSON.parse(json);
+          if (!Array.isArray(data) || data.length !== 100) throw new Error('Expected 100 questions');
+          fs.writeFileSync('public/pre_mock_data.json', JSON.stringify(data));
+          NODE
+      - name: Commit generated data
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add public/pre_mock_data.json
+          git diff --cached --quiet && exit 0
+          git commit -m "Generate static SBI Clerk PRE mock data"
+          git push
