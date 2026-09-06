@@ -19,7 +19,17 @@ export default function Chat(){
     var n=String(window.localStorage.getItem("dm_name")||"Student");
     if(p.length!==10){window.location.href="/";return;}
     setPhone(p);setName(n);
-    try{setNotif(window.Notification?window.Notification.permission:"unsupported");}catch(e){}
+    try{
+      if(window.Notification){
+        var permission=window.Notification.permission;
+        setNotif(permission);
+        if(permission==="default"){
+          window.Notification.requestPermission().then(function(result){
+            setNotif(result);
+          }).catch(function(){});
+        }
+      }else setNotif("unsupported");
+    }catch(e){}
   },[]);
 
   async function enableNotifications(){
