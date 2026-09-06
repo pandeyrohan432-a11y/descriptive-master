@@ -1,25 +1,19 @@
 import {useState} from 'react';
 
 const exams=[
-  {id:'sbi-clerk',name:'SBI Clerk',active:true,sub:'Prelims'},
-  {id:'ibps-clerk',name:'IBPS Clerk',active:false,sub:'Prelims'},
-  {id:'sbi-po',name:'SBI PO',active:false,sub:'Prelims'},
-  {id:'ibps-po',name:'IBPS PO',active:false,sub:'Prelims'},
-  {id:'rrb-clerk',name:'IBPS RRB Clerk',active:false,sub:'Prelims'},
-  {id:'rrb-po',name:'IBPS RRB PO',active:false,sub:'Prelims'},
-  {id:'nicl-assistant',name:'NICL Assistant',active:false,sub:'Prelims'},
-  {id:'other',name:'Other Exams',active:false,sub:'Coming Soon'}
+  {id:'sbi-clerk',name:'SBI Clerk',sub:'Prelims'},
+  {id:'ibps-clerk',name:'IBPS Clerk',sub:'Prelims'}
 ];
-
-const mocks=Array.from({length:8},(_,i)=>({
-  n:i+1,
-  title:i===0?'SBI Clerk 2025 Memory Based Paper':`SBI Clerk Prelims Mock ${i+1}`,
-  active:i===0
-}));
 
 export default function PreMocks(){
   const [selected,setSelected]=useState('sbi-clerk');
   const exam=exams.find(x=>x.id===selected)||exams[0];
+  const mocks=Array.from({length:8},(_,i)=>({
+    n:i+1,
+    title:selected==='sbi-clerk' && i===0?'SBI Clerk 2025 Memory Based Paper':`${exam.name} Prelims Mock ${i+1}`,
+    active:selected==='sbi-clerk' && i===0
+  }));
+
   return <main style={{minHeight:'100vh',background:'#f5f8fc',fontFamily:'Arial,sans-serif',color:'#17233c'}}>
     <header style={{height:70,background:'#fff',borderBottom:'1px solid #e5eaf0',display:'flex',alignItems:'center',padding:'0 28px',position:'sticky',top:0,zIndex:10}}>
       <a href="/" style={{textDecoration:'none',fontWeight:900,fontSize:20,color:'#17345f'}}>Descriptive Master</a>
@@ -37,7 +31,7 @@ export default function PreMocks(){
 
       <section style={{background:'#fff',borderRadius:18,padding:'20px 18px',boxShadow:'0 8px 28px rgba(30,55,90,.07)',marginBottom:24}}>
         <h2 style={{fontSize:17,margin:'0 0 16px'}}>Choose Exam</h2>
-        <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(130px,1fr))',gap:10}}>
+        <div style={{display:'grid',gridTemplateColumns:'repeat(2,minmax(160px,260px))',gap:10}}>
           {exams.map(x=><button key={x.id} onClick={()=>setSelected(x.id)} style={{border:selected===x.id?'2px solid #315d9b':'1px solid #e1e7ee',background:selected===x.id?'#eef4ff':'#fff',borderRadius:13,padding:'13px 10px',cursor:'pointer',textAlign:'left'}}>
             <div style={{fontWeight:800,fontSize:14,color:'#24344f'}}>{x.name}</div>
             <div style={{fontSize:11,color:selected===x.id?'#315d9b':'#8792a2',marginTop:4}}>{x.sub}</div>
