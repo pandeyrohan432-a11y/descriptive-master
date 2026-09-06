@@ -1,9 +1,7 @@
-import {useEffect,useState} from 'react';
-import {loadSbiClerk2025} from '../../data/pre_mock_data';
+import {useState} from 'react';
 
 export default function PreMocks(){
-  const [ready,setReady]=useState(false);
-  useEffect(()=>{loadSbiClerk2025().then(()=>setReady(true)).catch(()=>{});},[]);
+  const [ready]=useState(true);
   return <main style={{minHeight:'100vh',background:'#f5f8fc',padding:'32px 18px',fontFamily:'Arial,sans-serif'}}>
     <div style={{maxWidth:900,margin:'0 auto'}}>
       <a href="/" style={{color:'#315d9b',textDecoration:'none',fontWeight:700}}>← Back to Descriptive Master</a>
@@ -15,7 +13,7 @@ export default function PreMocks(){
           {['100 Questions','60 Minutes','+1 Correct','−0.25 Wrong','Detailed Solutions'].map(x=><span key={x} style={{background:'#f1f4f8',padding:'9px 12px',borderRadius:10,fontSize:13,fontWeight:700,color:'#3c4658'}}>{x}</span>)}
         </div>
         <div style={{background:'#fff8e7',border:'1px solid #f1d58a',padding:14,borderRadius:12,color:'#6b5317',fontSize:13,lineHeight:1.5,marginBottom:20}}><b>Note:</b> This is a recollected paper. The source PDF's answer key is used for scoring, and a few recollected items may contain source/key inconsistencies.</div>
-        <a href="/pre-mocks/sbi-clerk-2025" style={{display:'inline-block',background:'#315d9b',color:'#fff',padding:'13px 22px',borderRadius:12,textDecoration:'none',fontWeight:800}}>{ready?'Start Mock →':'Start Mock →'}</a>
+        <a href="/pre-mocks/sbi-clerk-2025" style={{display:'inline-block',background:'#315d9b',color:'#fff',padding:'13px 22px',borderRadius:12,textDecoration:'none',fontWeight:800}}>{ready?'Start Mock →':'Loading…'}</a>
       </div>
     </div>
   </main>;
