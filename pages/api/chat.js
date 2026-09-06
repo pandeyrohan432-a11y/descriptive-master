@@ -35,7 +35,8 @@ export default async function handler(req,res){
           const r=await db.query(`SELECT id,phone,sender,message,created_at FROM dm_chat_messages WHERE phone=$1 ORDER BY created_at ASC LIMIT 300`,[phone]);
           return res.status(200).json({messages:r.rows});
         }
-        const r=await db.query(`SELECT a.phone,MAX(a.name) AS name,MAX(m.created_at) AS last_message,(array_agg(m.sender ORDER BY m.created_at DESC))[1] AS last_sender,COUNT(m.id)::int AS message_count FROM dm_access_requests a LEFT JOIN dm_chat_messages m ON m.phone=a.phone WHERE a.status='approved' GROUP BY a.phone ORDER BY last_message DESC NULLS LAST, a.phone ASC LIMIT 100`);
+        // Keep students in a stable order. New messages must NOT reorder the list.
+        const r=await db.query(`SELECT a.phone,MAX(a.name) AS name,MAX(m.created_at) AS last_message,(array_agg(m.sender ORDER BY m.created_at DESC))[1] AS last_sender,COUNT(m.id)::int AS message_count FROM dm_access_requests a LEFT JOIN dm_chat_messages m ON m.phone=a.phone WHERE a.status='approved' GROUP BY a.phone ORDER BY MAX(a.name) ASC NULLS LAST, a.phone ASC LIMIT 100`);
         return res.status(200).json({students:r.rows});
       }
       const phone=cleanPhone(req.query.phone);
