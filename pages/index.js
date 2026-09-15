@@ -1,5 +1,5 @@
 import PairedHome from "./paired-home";
 
 export default function Home(){
-  return <PairedHome />;
+  return <><style dangerouslySetInnerHTML={{__html:`.card p{display:none!important}`}} /><PairedHome /></>;
 }
