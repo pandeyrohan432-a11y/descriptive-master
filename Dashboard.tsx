@@ -7,51 +7,87 @@ export default async function Dashboard({ user }: { user: any }) {
   const attempts = await db.attempt.findMany({ where: { userId: user.id }, orderBy: { startedAt: "desc" }, take: 10, include: { test: true } });
   const completed = attempts.filter((a) => a.status !== "IN_PROGRESS").length;
   const displayName = user.name || "Student";
+  const firstName = displayName.split(" ")[0];
 
-  return <div className="dm-app">
-    <header className="dm-nav"><div className="dm-nav-inner">
-      <Link href="/" className="dm-brand"><span className="dm-brand-mark">DM</span><span>Descriptive<span>Master</span></span></Link>
-      <nav className="dm-nav-links"><a href="#home" className="active">Home</a><a href="#tests">Tests</a><a href="#practice">Practice</a><a href="#progress">My Progress</a></nav>
-      <div className="dm-user"><div className="dm-avatar-small">{displayName.slice(0,1).toUpperCase()}</div><span>{displayName}</span><LogoutButton /></div>
-    </div></header>
+  return <div className="mx-app">
+    <aside className="mx-sidebar">
+      <Link href="/" className="mx-logo"><span className="mx-logo-mark">DM</span><span>Descriptive<span>Master</span></span></Link>
+      <div className="mx-menu-label">MAIN MENU</div>
+      <nav className="mx-menu">
+        <a className="selected" href="#home"><span>⌂</span> Dashboard</a>
+        <a href="#courses"><span>▣</span> My Courses</a>
+        <a href="#tests"><span>▤</span> Test Series</a>
+        <a href="#progress"><span>◔</span> My Progress</a>
+        <a href="#practice"><span>✎</span> Practice</a>
+      </nav>
+      <div className="mx-menu-label">PERSONAL</div>
+      <nav className="mx-menu">
+        <a href="#history"><span>◷</span> Attempt History</a>
+        <a href="#help"><span>?</span> Help & Support</a>
+      </nav>
+      <div className="mx-sidebar-bottom">
+        <div className="mx-upgrade"><b>IBPS PO Mains</b><small>Descriptive preparation</small><div className="mx-progress-line"><i /></div><span>Keep practising!</span></div>
+        <LogoutButton />
+      </div>
+    </aside>
 
-    <main id="home">
-      <section className="dm-hero"><div className="dm-hero-inner">
-        <div className="dm-hero-copy"><div className="dm-eyebrow">🎯 IBPS PO MAINS • DESCRIPTIVE</div>
-          <h1>Master your <span>Descriptive</span> paper.</h1>
-          <p>Practice essays and comprehension in a realistic exam environment. Build speed, structure and confidence before the real test.</p>
-          <div className="dm-hero-actions"><a href="#tests" className="dm-btn dm-btn-light">Start Practice <span>→</span></a><a href="#progress" className="dm-btn dm-btn-ghost">View Progress</a></div>
-          <div className="dm-trust"><span>✓</span> 25 Marks <span>✓</span> 30 Minutes <span>✓</span> 2 Questions</div>
-        </div>
-        <div className="dm-hero-card"><div className="dm-orbit dm-orbit-one"/><div className="dm-orbit dm-orbit-two"/><div className="dm-paper-icon">✍️</div><div className="dm-score-pill"><strong>25/25</strong><small>Target Score</small></div><div className="dm-mini-card"><span>Writing Practice</span><b>IBPS PO</b><i>30:00</i></div></div>
-      </div></section>
+    <div className="mx-main">
+      <header className="mx-header">
+        <div className="mx-breadcrumb"><span>Dashboard</span><b>›</b><strong>Home</strong></div>
+        <div className="mx-header-right"><div className="mx-search">⌕ <span>Search courses, tests...</span></div><button className="mx-icon-btn" aria-label="Notifications">♧</button><div className="mx-profile"><div className="mx-avatar">{displayName.slice(0,1).toUpperCase()}</div><div><b>{displayName}</b><small>IBPS PO Aspirant</small></div><span>⌄</span></div></div>
+      </header>
 
-      <section className="dm-content wide" id="progress">
-        <div className="dm-stats">
-          <div className="dm-stat"><span className="stat-icon purple">✍</span><div><b>{attempts.length}</b><small>Tests Attempted</small></div></div>
-          <div className="dm-stat"><span className="stat-icon blue">✓</span><div><b>{completed}</b><small>Completed</small></div></div>
-          <div className="dm-stat"><span className="stat-icon orange">⏱</span><div><b>30 min</b><small>Exam Duration</small></div></div>
-          <div className="dm-stat"><span className="stat-icon green">★</span><div><b>25</b><small>Maximum Marks</small></div></div>
-        </div>
-
-        <div className="dm-section-head" id="tests"><div><div className="dm-kicker">SMART PRACTICE</div><h2>Choose your practice test</h2><p>Realistic IBPS PO descriptive tests designed for exam-day practice.</p></div><span className="dm-count">{tests.length} Tests Available</span></div>
-        {tests.length === 0 ? <div className="dm-empty">No published tests are available yet.</div> : <div className="dm-test-grid">{tests.map((t,i)=><article className="dm-test-card" key={t.id}>
-          <div className="dm-test-top"><span className="dm-test-badge">IBPS PO</span><span className="dm-test-number">#{String(i+1).padStart(2,"0")}</span></div>
-          <h3>Descriptive Test {i+1}</h3><p>Essay + Comprehension</p><div className="dm-test-meta"><span>❔ 2 Qs</span><span>✓ 25 Marks</span><span>◷ 30 Mins</span></div>
-          <Link className="dm-start" href={`/test/${t.testNo}`}>Start Test <span>→</span></Link>
-        </article>)}</div>}
-
-        <section className="dm-features" id="practice"><div className="dm-feature-heading"><div className="dm-kicker">WHY DESCRIPTIVE MASTER?</div><h2>Everything you need to improve.</h2><p>Focused tools for the exact skills that matter in the IBPS PO descriptive paper.</p></div><div className="dm-feature-grid">
-          <div className="dm-feature"><span>🎯</span><h3>Exam-Oriented Tests</h3><p>Practice with the same 25-mark, 30-minute format you will face in the exam.</p></div>
-          <div className="dm-feature"><span>✍️</span><h3>Writing Practice</h3><p>Build a repeatable structure for essays and improve your comprehension speed.</p></div>
-          <div className="dm-feature"><span>📈</span><h3>Track Your Progress</h3><p>Keep your recent attempts in one place and see how consistently you practice.</p></div>
-        </div></section>
-
-        <section className="dm-history"><div className="dm-section-head compact"><div><div className="dm-kicker">YOUR ACTIVITY</div><h2>Recent attempts</h2></div></div>
-          {attempts.length===0 ? <div className="dm-empty">No attempts yet. Start your first test above.</div> : <div className="dm-history-list">{attempts.map(a=><div className="dm-history-row" key={a.id}><div className="history-icon">📝</div><div className="history-main"><b>Descriptive Test {a.test.testNo}</b><small>{new Date(a.startedAt).toLocaleString()}</small></div><span className={`status status-${String(a.status).toLowerCase()}`}>{a.status.replaceAll("_"," ")}</span></div>)}</div>}
+      <main id="home" className="mx-content">
+        <section className="mx-welcome">
+          <div><div className="mx-kicker">WELCOME BACK 👋</div><h1>Hi, {firstName}! Ready to improve your score?</h1><p>Continue your preparation and practise the IBPS PO descriptive paper like the real exam.</p></div>
+          <a href="#courses" className="mx-primary-btn">Continue Learning <span>→</span></a>
         </section>
-      </section>
-    </main>
-    <footer className="dm-footer"><div className="dm-footer-brand"><span className="dm-brand-mark">DM</span><b>DescriptiveMaster</b></div><span>Built for IBPS PO aspirants • Practice smarter.</span></footer>
+
+        <section className="mx-stats" id="progress">
+          <div className="mx-stat"><div className="mx-stat-icon purple">▤</div><div><small>Tests Attempted</small><b>{attempts.length}</b><em>Keep going</em></div></div>
+          <div className="mx-stat"><div className="mx-stat-icon blue">✓</div><div><small>Tests Completed</small><b>{completed}</b><em>Completed tests</em></div></div>
+          <div className="mx-stat"><div className="mx-stat-icon orange">◷</div><div><small>Exam Duration</small><b>30 <small>min</small></b><em>Per test</em></div></div>
+          <div className="mx-stat"><div className="mx-stat-icon green">★</div><div><small>Maximum Marks</small><b>25</b><em>Per test</em></div></div>
+        </section>
+
+        <section id="courses" className="mx-section">
+          <div className="mx-section-title"><div><span>MY COURSES</span><h2>Your preparation</h2><p>Access your enrolled learning folders and practice material.</p></div><a href="#courses">View all →</a></div>
+          <div className="mx-course-grid">
+            <a href="#descriptive-test" className="mx-course-card active-course">
+              <div className="mx-course-cover"><div className="mx-cover-shape one"/><div className="mx-cover-shape two"/><div className="mx-folder">▰</div><span>IBPS PO MAINS</span></div>
+              <div className="mx-course-body"><div className="mx-course-tag">ACTIVE COURSE</div><h3>IBPS PO Descriptive</h3><p>Essay Writing & Comprehension</p><div className="mx-course-foot"><span>▣ {tests.length} Tests</span><span>◷ 30 min</span><b>Open Folder →</b></div></div>
+            </a>
+            <div className="mx-course-card coming-course"><div className="mx-coming-icon">＋</div><h3>More courses coming soon</h3><p>New IBPS PO preparation modules will appear here.</p><span>COMING SOON</span></div>
+          </div>
+        </section>
+
+        <section id="descriptive-test" className="mx-section mx-test-folder">
+          <div className="mx-folder-head"><div><div className="mx-path"><span>My Courses</span><b>›</b><strong>IBPS PO Descriptive</strong></div><h2>Descriptive Test</h2><p>Choose a test below. Each test follows the actual 25-mark, 30-minute pattern.</p></div><div className="mx-folder-stats"><b>{tests.length}</b><span>Tests available</span></div></div>
+          {tests.length === 0 ? <div className="mx-empty">No published descriptive tests are available yet.</div> : <div className="mx-test-grid">{tests.map((t, i) => {
+            const previous = attempts.find((a) => a.testId === t.id && a.status !== "IN_PROGRESS");
+            return <article className="mx-test-card" key={t.id}>
+              <div className="mx-test-card-top"><span className="mx-test-no">TEST {String(i + 1).padStart(2,"0")}</span><span className="mx-available">AVAILABLE</span></div>
+              <div className="mx-test-icon">✍</div><h3>Descriptive Test {i + 1}</h3><p>IBPS PO • Essay + Comprehension</p>
+              <div className="mx-test-info"><span>❔ 2 Sections</span><span>✓ 25 Marks</span><span>◷ 30 Mins</span><span>◉ English</span></div>
+              <div className="mx-test-status">{previous ? `Attempted • ${new Date(previous.startedAt).toLocaleDateString("en-IN")}` : "Available now"}</div>
+              <Link className="mx-test-btn" href={`/test/${t.testNo}`}>{previous ? "Reattempt Test" : "Start Test"}<span>→</span></Link>
+            </article>;
+          })}</div>}
+        </section>
+
+        <section id="practice" className="mx-section mx-practice">
+          <div className="mx-section-title"><div><span>QUICK PRACTICE</span><h2>Build your descriptive skills</h2><p>Focused practice for the areas that matter most in the exam.</p></div></div>
+          <div className="mx-practice-grid"><div><span>✍️</span><h3>Essay Writing</h3><p>Improve structure, introduction, arguments and conclusion.</p></div><div><span>📖</span><h3>Comprehension</h3><p>Practise reading quickly and answering in your own words.</p></div><div><span>🎯</span><h3>Exam Strategy</h3><p>Learn how to manage 25 marks in a strict 30-minute window.</p></div></div>
+        </section>
+
+        <section id="history" className="mx-section mx-history">
+          <div className="mx-section-title"><div><span>RECENT ACTIVITY</span><h2>Recent attempts</h2></div></div>
+          {attempts.length === 0 ? <div className="mx-empty">No attempts yet. Open the Descriptive Test folder and start your first test.</div> : <div className="mx-history-list">{attempts.slice(0,5).map(a=><div className="mx-history-row" key={a.id}><div className="mx-history-icon">✍</div><div><b>Descriptive Test {a.test.testNo}</b><small>{new Date(a.startedAt).toLocaleString("en-IN")}</small></div><span className={`mx-status ${String(a.status).toLowerCase()}`}>{String(a.status).replaceAll("_"," ")}</span><Link href={`/test/${a.test.testNo}`}>Open →</Link></div>)}</div>}
+        </section>
+
+        <section id="help" className="mx-help"><div><b>Need help with your preparation?</b><span>Practise consistently and use the test environment to build exam-day confidence.</span></div><a href="#practice">Explore Practice →</a></section>
+      </main>
+      <footer className="mx-footer"><b>DescriptiveMaster</b><span>IBPS PO Descriptive Practice</span><span>© 2026 DescriptiveMaster</span></footer>
+    </div>
   </div>;
 }
