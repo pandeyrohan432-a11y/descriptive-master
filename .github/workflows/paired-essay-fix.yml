@@ -1,0 +1,78 @@
+name: Fix paired essay mocks
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+permissions:
+  contents: write
+jobs:
+  patch:
+    if: "!contains(github.event.head_commit.message, '[paired-essay]')"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Update essay UI and evaluation
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re
+
+          p = Path('pages/index.js')
+          s = p.read_text(encoding='utf-8')
+
+          # Track the selected essay option separately from the essay answer.
+          s = s.replace(
+              '[showSolutions,setShowSolutions]=useState(false);',
+              '[showSolutions,setShowSolutions]=useState(false),[selectedEssay,setSelectedEssay]=useState("");'
+          )
+
+          s = s.replace(
+              'const current=TOPICS[test-1],passage=PASSAGES[test-1],qs=QUESTIONS[test-1];',
+              'const current=TOPICS[test-1],passage=PASSAGES[test-1],qs=QUESTIONS[test-1],essayOptions=current.split("||").map(x=>x.trim()).filter(Boolean);'
+          )
+
+          s = s.replace(
+              'function begin(){if(!agree)return alert("Please tick the declaration before starting.");setView("exam")}',
+              'function begin(){if(!agree)return alert("Please tick the declaration before starting.");setSelectedEssay("");setView("exam")}'
+          )
+
+          s = s.replace(
+              'function goComp(){setEssayLocked(true);setSection("comp")}',
+              'function goComp(){const w=countWords(essay);if(!selectedEssay)return alert("Please select one essay topic before continuing.");if(w<250||w>300)return alert("Essay must be between 250 and 300 words.");setEssayLocked(true);setSection("comp")}'
+          )
+
+          s = s.replace(
+              'essayTopic:current,essay,passage,questions:qs,compAnswers:comp',
+              'essayTopic:selectedEssay,essay,passage,questions:qs,compAnswers:comp'
+          )
+
+          # Replace the complete exam screen with the two-option essay UI.
+          exam = r''' if(view==="exam")return <><style>{css}</style><div className="examTop"><b>DESCRIPTIVE MASTER | IBPS PO</b><b>Time Left: {mm}:{ss}</b></div><div className="examHead"><div className="tabs"><button className="tab on" disabled={essayLocked} onClick={()=>{if(!essayLocked)setSection("essay")}}>Essay Writing ⓘ</button><button className={'tab '+(section==='comp'?'on':'')} onClick={()=>setSection('comp')}>Comprehension ⓘ</button></div><b>25 Marks</b></div><div className="examGrid"><main className="main"><div className="qtitle">Question No {section==='essay'?1:2}</div><div className="body">{section==='essay'?<><h3>Question 1 — Essay Writing (15 Marks)</h3><p><b>Write an essay on ANY ONE of the following topics:</b></p><div style={{display:"grid",gap:10,margin:"16px 0"}}>{essayOptions.map((option,i)=><label key={option} style={{display:"flex",gap:12,alignItems:"flex-start",padding:14,border:"1px solid #d5dce7",borderRadius:10,background:selectedEssay===option?"#eef4ff":"#fff",cursor:"pointer"}}><input type="radio" name="essayTopic" value={option} checked={selectedEssay===option} onChange={()=>setSelectedEssay(option)} style={{marginTop:4}}/><span><b>Option {String.fromCharCode(65+i)}</b><br/><span>{option}</span></span></label>)}</div>{selectedEssay?<><div style={{background:"#f6f8fb",border:"1px solid #dce3ec",borderRadius:9,padding:10,marginBottom:10,fontSize:13}}><b>Selected topic:</b> {selectedEssay}</div><textarea className="essay" value={essay} onChange={e=>setEssay(e.target.value)} placeholder="Write your essay in 250–300 words..."/><div className="wc">Words: {countWords(essay)} / 250–300</div></>:<div style={{padding:16,borderRadius:9,background:"#fff8e6",border:"1px solid #f0d58a",color:"#725500"}}>Select one of the two topics above to start writing.</div>}</>:<><h3>Question No 2 — Comprehension (10 Marks)</h3><h3>Directions: Read the following passage carefully and answer the questions.</h3><div className="passage">{passage}</div>{qs.map((q,i)=><div className="cq" key={i}><b>{i+1}. {q}</b><textarea value={comp[i]} onChange={e=>{const x=[...comp];x[i]=e.target.value;setComp(x)}} placeholder="Write your answer in 30–40 words..."/><div className="wc">Words: {countWords(comp[i])} / 40</div></div>)}</>}</div><div className="footer">{section==='essay'?<button className="btn primary" onClick={goComp}>Save & Next →</button>:<button className="btn primary" onClick={submit}>Submit Test</button>}</div></main><aside className="side"><div className="candidate"><div className="avatar">●</div><b>{name||"Student"}</b><p style={{fontSize:12}}>{phone}</p></div><div className="sect">Question Palette</div><div className="pqs"><button className={'pq '+(section==='essay'?'current':'')} disabled={essayLocked} onClick={()=>setSection('essay')}>1</button><button className={'pq '+(section==='comp'?'current':'')} onClick={()=>setSection('comp')}>2</button></div><div className="legend"><span>🟠 Current</span><span>⚪ Not Visited</span></div></aside></div></div>;
+'''
+          pattern = r' if\(view==="exam"\)return .*? if\(view==="history"\)return'
+          replacement = exam + ' if(view==="history")return'
+          s2, n = re.subn(pattern, replacement, s, count=1, flags=re.S)
+          if n != 1:
+              raise SystemExit('Could not locate exam screen block')
+          s = s2
+
+          # Update the instructions to make the two-option format explicit.
+          s = s.replace(
+              '<tr><td>Essay Writing</td><td>1</td><td>15</td></tr>',
+              '<tr><td>Essay Writing</td><td>2 topics — choose any 1</td><td>15</td></tr>'
+          )
+          s = s.replace(
+              '<h3>Test Structure</h3>',
+              '<h3>Test Structure</h3><p style={{color:"#667085"}}>Essay: 2 topics are provided. Choose any one and write 250–300 words.</p>'
+          )
+
+          p.write_text(s, encoding='utf-8')
+          PY
+
+          git config user.name github-actions
+          git config user.email github-actions@github.com
+          git add pages/index.js
+          if git diff --cached --quiet; then exit 0; fi
+          git commit -m "[paired-essay] Add two essay options per mock"
+          git push
