@@ -1,4 +1,5 @@
-const MODEL = process.env.GEMINI_EVAL_MODEL || "gemini-3.6-flash";
+const PRIMARY_MODEL = process.env.GEMINI_EVAL_MODEL || "gemini-3.6-flash";
+const FALLBACK_MODELS = [PRIMARY_MODEL, "gemini-2.5-flash", "gemini-2.5-flash-lite"].filter((v, i, a) => v && a.indexOf(v) === i);
 
 function clamp(n, min, max) {
   return Math.max(min, Math.min(max, Number(n) || 0));
@@ -23,6 +24,24 @@ const responseSchema = { type: "OBJECT", properties: {
   overallFeedback: { type: "STRING" }, keyImprovements: { type: "ARRAY", items: { type: "STRING" } }
 }, required: ["essay", "comprehension", "overallFeedback", "keyImprovements"] };
 
+function isTemporaryCapacityError(status, data) {
+  if (![429, 500, 502, 503, 504].includes(status)) return false;
+  const msg = String(data?.error?.message || "").toLowerCase();
+  return status !== 429 || /high demand|overload|capacity|temporar|resource.?exhausted|unavailable|quota/.test(msg);
+}
+
+async function callGemini(model, prompt) {
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(process.env.GEMINI_API_KEY)}`;
+  for (let attempt = 0; attempt < 2; attempt++) {
+    const response = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ contents: [{ role: "user", parts: [{ text: prompt }] }], generationConfig: { responseMimeType: "application/json", responseSchema, temperature: 0.2, maxOutputTokens: 7000 } }) });
+    const data = await response.json();
+    if (response.ok) return { data, model };
+    if (!isTemporaryCapacityError(response.status, data) || attempt === 1) return { error: data?.error?.message || "Gemini evaluation failed.", status: response.status };
+    await new Promise(resolve => setTimeout(resolve, 1200));
+  }
+  return { error: "Gemini evaluation failed.", status: 503 };
+}
+
 export default async function handler(req, res) {
   if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
   if (!process.env.GEMINI_API_KEY) return res.status(503).json({ error: "Free AI evaluation is not configured. Add GEMINI_API_KEY in the Vercel server environment." });
@@ -31,15 +50,24 @@ export default async function handler(req, res) {
   const payload = { essayTopic, essay: essay || "", passage, questions: questions.slice(0, 5), compAnswers: compAnswers.slice(0, 5) };
   const prompt = `You are the senior evaluator for an IBPS PO Mains descriptive test. Evaluate strictly but fairly. The test is 25 marks: Essay 15 + Comprehension 10. Essay rubric: relevance 4, structure/coherence 3, arguments/depth 3, grammar/language 3, vocabulary/expression 2. Comprehension has exactly 5 questions, each out of 2. Judge semantic correctness, relevance, completeness and clarity. Each comprehension answer targets 30-40 words. For the essay provide score, rubric breakdown, what was good, what was wrong, concrete improvements and a model answer of about 250-300 words. For every comprehension question provide score, student's answer, what was correct, what was missing/wrong, and an ideal answer of 30-40 words. Also provide overall feedback and key improvements. Return only JSON matching the supplied response schema. TEST DATA: ${JSON.stringify(payload)}`;
   try {
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(MODEL)}:generateContent?key=${encodeURIComponent(process.env.GEMINI_API_KEY)}`;
-    const response = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ contents: [{ role: "user", parts: [{ text: prompt }] }], generationConfig: { responseMimeType: "application/json", responseSchema, temperature: 0.2, maxOutputTokens: 7000 } }) });
-    const data = await response.json();
-    if (!response.ok) return res.status(response.status).json({ error: data?.error?.message || "Gemini evaluation failed." });
-    const text = data?.candidates?.[0]?.content?.parts?.map(p => p.text || "").join("").trim();
-    if (!text) return res.status(502).json({ error: "AI returned no evaluation." });
-    return res.status(200).json({ evaluation: normalise(JSON.parse(text)), model: MODEL, provider: "Google Gemini" });
+    let lastError = null;
+    for (const model of FALLBACK_MODELS) {
+      const result = await callGemini(model, prompt);
+      if (result.data) {
+        const text = result.data?.candidates?.[0]?.content?.parts?.map(p => p.text || "").join("").trim();
+        if (!text) { lastError = "AI returned no evaluation."; continue; }
+        try {
+          return res.status(200).json({ evaluation: normalise(JSON.parse(text)), model, provider: "Google Gemini" });
+        } catch (parseError) {
+          lastError = "AI returned an invalid evaluation format.";
+          continue;
+        }
+      }
+      lastError = result.error || "Gemini evaluation failed.";
+    }
+    return res.status(503).json({ error: "Gemini is temporarily busy. Please try the evaluation again in a few seconds." });
   } catch (error) {
     console.error("Gemini evaluation error", error);
-    return res.status(500).json({ error: error?.message || "Unable to evaluate this attempt right now." });
+    return res.status(500).json({ error: "Unable to evaluate this attempt right now. Please try again." });
   }
 }
