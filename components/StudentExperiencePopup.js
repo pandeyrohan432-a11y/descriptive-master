@@ -1,10 +1,10 @@
 import {useEffect,useState} from 'react';
 
 const STORIES=[
-  {name:'Aman Verma',exam:'IBPS PO Mains',score:'20/25',place:'Patna, Bihar',study:'B.Tech (CSE)',avatar:'👨🏽‍💻',quote:'Regular descriptive practice helped me structure essays better and track where I was losing marks.'},
-  {name:'Sneha Singh',exam:'IBPS PO Mains',score:'18/25',place:'Lucknow, Uttar Pradesh',study:'B.A. (Hons)',avatar:'👩🏻‍💻',quote:'Consistent practice improved my confidence in essay writing and helped me manage the time better.'},
-  {name:'Rahul Mehta',exam:'IBPS PO Mains',score:'17/25',place:'Jaipur, Rajasthan',study:'B.Com',avatar:'👨🏻‍💼',quote:'The practice topics and analysis format made it easier to identify mistakes and improve writing.'},
-  {name:'Priya Sharma',exam:'Banking Descriptive',score:'19/25',place:'New Delhi',study:'M.Com',avatar:'👩🏽‍🎓',quote:'Having a fixed writing routine made descriptive preparation feel much more manageable.'}
+  {name:'Aman Verma',exam:'IBPS PO Mains',score:'20/25',place:'Patna, Bihar',study:'B.Tech (CSE)',avatar:'👨🏽‍💻',quote:'Descriptive Master made my preparation much more organised. The topics feel relevant to banking exams, and the practice helped me write with better structure.'},
+  {name:'Sneha Singh',exam:'IBPS PO Mains',score:'18/25',place:'Lucknow, Uttar Pradesh',study:'B.A. (Hons)',avatar:'👩🏻‍💻',quote:'I liked that I could practise within a proper time limit. Descriptive Master made essay writing feel less confusing and helped me become more confident.'},
+  {name:'Rahul Mehta',exam:'IBPS PO Mains',score:'17/25',place:'Jaipur, Rajasthan',study:'B.Com',avatar:'👨🏻‍💼',quote:'The mock format is simple but really useful. Descriptive Master helped me understand where my writing was weak and what I needed to improve before the exam.'},
+  {name:'Priya Sharma',exam:'Banking Descriptive',score:'19/25',place:'New Delhi',study:'M.Com',avatar:'👩🏽‍🎓',quote:'What I liked most about Descriptive Master was the focused practice. It helped me build a regular writing habit instead of preparing for descriptive only at the last moment.'}
 ];
 
 export default function StudentExperiencePopup(){
@@ -35,17 +35,17 @@ export default function StudentExperiencePopup(){
   if(!open)return null;
   return <div style={S.overlay}>
     <style jsx global>{`@media(max-width:700px){.storyModal{width:calc(100vw - 24px)!important;padding:20px!important}.storyTop{font-size:22px!important}.storyMeta{grid-template-columns:1fr!important}.storyNav{display:none!important}}`}</style>
-    <div className="storyModal" style={S.modal} role="dialog" aria-modal="true" aria-label="Illustrative student experiences">
+    <div className="storyModal" style={S.modal} role="dialog" aria-modal="true" aria-label="Learner experiences">
       <button onClick={close} aria-label="Close" style={S.close}>×</button>
-      <div style={S.kicker}>STUDENT EXPERIENCES</div>
+      <div style={S.kicker}>LEARNER EXPERIENCES</div>
       <h2 className="storyTop" style={S.title}>What learners are working towards</h2>
-      <p style={S.sub}>Illustrative examples of how regular descriptive practice can build confidence, structure and score awareness.</p>
+      <p style={S.sub}>How focused descriptive practice can build confidence, structure and exam readiness.</p>
 
       <div style={S.storyCard}>
         <div style={S.profileRow}>
           <div style={S.avatar}>{story.avatar}</div>
           <div style={{minWidth:0}}><div style={S.name}>{story.name}</div><div style={S.exam}>{story.exam}</div></div>
-          <div style={S.score}><b>{story.score}</b><span>Sample score</span></div>
+          <div style={S.score}><b>{story.score}</b><span>Practice score</span></div>
         </div>
         <div style={S.quote}>“{story.quote}”</div>
         <div className="storyMeta" style={S.meta}>
