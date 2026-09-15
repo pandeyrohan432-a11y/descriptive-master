@@ -1,0 +1,41 @@
+name: Update descriptive mock topics
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+permissions:
+  contents: write
+jobs:
+  patch:
+    if: "!contains(github.event.head_commit.message, '[mock-topics]')"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set paired essay topics
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re
+          p=Path('pages/index.js')
+          s=p.read_text(encoding='utf-8')
+          topics='''const TOPICS=[
+           "Digital Banking and Cashless Economy||Financial Literacy in Rural India",
+           "Non-Performing Assets and Indian Banks||Gig Economy and Social Security",
+           "Digital Rupee and the Indian Economy||Privatization of Public Sector Banks",
+           "MSMEs and India's Economy||Fair Revenue Sharing Between Centre and States",
+           "Orange Economy and Employment||Attracting FDI in Manufacturing",
+           "Green Banking||Startups, Make in India and Youth Entrepreneurship",
+           "Artificial Intelligence and Employment||Cybercrime and Digital Transactions",
+           "Social Media and Mental Health of Youth||Deepfakes, Fake News and Democracy",
+           "5G and Its Benefits||E-Waste Management",
+           "Online Education vs Traditional Education||ISRO and India's Space Missions"
+          ];'''
+          s=re.sub(r'const TOPICS=\[.*?\];',topics,s,count=1,flags=re.S)
+          p.write_text(s,encoding='utf-8')
+          PY
+          git config user.name github-actions
+          git config user.email github-actions@github.com
+          git add pages/index.js
+          if git diff --cached --quiet; then exit 0; fi
+          git commit -m "[mock-topics] Set paired descriptive essay options"
+          git push
