@@ -1,6 +1,17 @@
 import {useEffect,useState} from "react";
 
-const TOPICS=["Artificial Intelligence: opportunities, risks and responsible adoption","Digital Banking & Digital Payments: convenience, inclusion and consumer protection","Cybersecurity & Online Fraud: building a safer digital ecosystem","Banking & Financial Inclusion: bringing formal finance to every citizen","Economy & Employment: growth, investment and quality job creation","Climate Change & Sustainability: development without compromising resilience","Renewable Energy: scaling clean power while ensuring reliable supply","Women Empowerment & Workforce Participation: removing barriers to equal opportunity","Data Privacy & Digital Rights: balancing innovation with individual control","Gig Economy & Future of Work: flexibility, security and changing careers"];
+const TOPICS=[
+ "Digital Banking and Cashless Economy||Financial Literacy in Rural India",
+ "Non-Performing Assets and Indian Banks||Gig Economy and Social Security",
+ "Digital Rupee and the Indian Economy||Privatization of Public Sector Banks",
+ "MSMEs and India's Economy||Fair Revenue Sharing Between Centre and States",
+ "Orange Economy and Employment||Attracting FDI in Manufacturing",
+ "Green Banking||Startups, Make in India and Youth Entrepreneurship",
+ "Artificial Intelligence and Employment||Cybercrime and Digital Transactions",
+ "Social Media and Mental Health of Youth||Deepfakes, Fake News and Democracy",
+ "5G and Its Benefits||E-Waste Management",
+ "Online Education vs Traditional Education||ISRO and India's Space Missions"
+];
 const RELEASE_DATES=["2026-09-04","2026-09-06","2026-09-08","2026-09-10","2026-09-12","2026-09-14","2026-09-16","2026-09-18","2026-09-20","2026-09-22"];
 const PASSAGES=[
 `India has recently strengthened the legal framework around Indian Standard Time by proposing rules that make IST the exclusive official time for administrative, legal and commercial functions. The move is intended to reduce confusion caused by inconsistent time settings across digital systems and institutions. Accurate time synchronisation matters for banking, telecommunications, transport and critical infrastructure. Modern networks can require extremely precise clocks when different machines exchange information at high speed. The proposed framework also reflects a wider concern about technological resilience and national digital sovereignty. Businesses and government departments would need to align their systems during the transition period. Supporters see a common time standard as a simple way to improve coordination across the country. The issue shows how something as ordinary as a clock can become important when economic activity increasingly depends on interconnected digital systems.`,
