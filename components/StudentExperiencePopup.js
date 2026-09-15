@@ -58,7 +58,6 @@ export default function StudentExperiencePopup(){
         <div style={S.dots}>{STORIES.map((_,i)=><button key={i} onClick={()=>setIndex(i)} style={{...S.dot,...(i===index?S.dotOn:{})}} aria-label={'Story '+(i+1)}/>)}</div>
         <button onClick={()=>setIndex(i=>(i+1)%STORIES.length)} style={S.navBtn}>›</button>
       </div>
-      <div style={S.disclaimer}>ⓘ Illustrative sample — not a claim of an actual student result.</div>
     </div>
   </div>;
 }
@@ -82,6 +81,5 @@ const S={
   navBtn:{width:34,height:34,borderRadius:'50%',border:'1px solid #d1dbe7',background:'#fff',fontSize:22,color:'#315d9b',cursor:'pointer'},
   dots:{display:'flex',gap:7},
   dot:{width:8,height:8,padding:0,border:0,borderRadius:'50%',background:'#cbd8e8',cursor:'pointer'},
-  dotOn:{background:'#2f78c7',width:22,borderRadius:10},
-  disclaimer:{marginTop:12,textAlign:'center',fontSize:11,color:'#7a8798',background:'#eef4fb',borderRadius:999,padding:'7px 12px'}
+  dotOn:{background:'#2f78c7',width:22,borderRadius:10}
 };
