@@ -2,19 +2,27 @@ import {useEffect,useState} from "react";
 import "../globals.css";
 import StudentExperiencePopup from "../components/StudentExperiencePopup";
 
-function isDashboard(){
-  return typeof window!=="undefined" && (window.location.pathname==="/" || window.location.pathname==="/dashboard");
+function useDashboardView(){
+  const [active,setActive]=useState(false);
+  useEffect(()=>{
+    const sync=()=>setActive(typeof window!=="undefined" && window.__dmView==="dashboard");
+    sync();
+    window.addEventListener("dm-view-change",sync);
+    return()=>window.removeEventListener("dm-view-change",sync);
+  },[]);
+  return active;
 }
 
 function ChatButton(){
+  const dashboard=useDashboardView();
   const [student,setStudent]=useState(false);
   const [admin,setAdmin]=useState(false);
   useEffect(()=>{
-    if(!isDashboard()) return;
+    if(!dashboard){setStudent(false);setAdmin(false);return;}
     let alive=true;
     try{
       const isAdmin=document.cookie.indexOf("dm_admin=1")!==-1;
-      if(isAdmin){if(alive)setAdmin(true);}
+      if(isAdmin&&alive)setAdmin(true);
       const logged=localStorage.getItem("dm_logged")==="1";
       const phone=(localStorage.getItem("dm_phone")||"").replace(/\D/g,"");
       if(logged&&phone.length===10){
@@ -22,17 +30,18 @@ function ChatButton(){
       }
     }catch(e){}
     return()=>{alive=false;};
-  },[]);
-  if(!isDashboard()||(!student&&!admin))return null;
+  },[dashboard]);
+  if(!dashboard||(!student&&!admin))return null;
   return <div style={{position:"fixed",right:18,bottom:18,zIndex:9999,display:"flex",gap:8,flexDirection:"column",alignItems:"flex-end"}}>
     {student&&<a href="/chat" style={{background:"#3d78c2",color:"#fff",textDecoration:"none",padding:"12px 16px",borderRadius:999,boxShadow:"0 5px 18px rgba(25,45,80,.25)",fontWeight:700}}>💬 Chat with Admin</a>}
     {admin&&<a href="/admin-chat" style={{background:"#263a61",color:"#fff",textDecoration:"none",padding:"12px 16px",borderRadius:999,boxShadow:"0 5px 18px rgba(25,45,80,.25)",fontWeight:700}}>💬 Student Chats</a>}
   </div>;
 }
 function ProfileButton(){
+  const dashboard=useDashboardView();
   const [logged,setLogged]=useState(false),[name,setName]=useState("Student"),[photo,setPhoto]=useState("");
   useEffect(()=>{
-    if(!isDashboard()) return;
+    if(!dashboard){setLogged(false);return;}
     const read=()=>{
       try{
         const ok=localStorage.getItem("dm_logged")==="1";
@@ -47,8 +56,8 @@ function ProfileButton(){
     window.addEventListener("storage",read);
     const t=setInterval(read,1000);
     return()=>{window.removeEventListener("storage",read);clearInterval(t);};
-  },[]);
-  if(!isDashboard()||!logged)return null;
+  },[dashboard]);
+  if(!dashboard||!logged)return null;
   const initial=(name||"S").charAt(0).toUpperCase();
   return <a href="/profile" aria-label="Open profile" style={{position:"fixed",top:76,right:18,zIndex:9997,display:"flex",alignItems:"center",gap:9,padding:"7px 11px 7px 7px",borderRadius:999,background:"#fff",border:"1px solid #d9e0e8",boxShadow:"0 5px 18px rgba(25,45,80,.14)",textDecoration:"none",color:"#203552",fontWeight:800,fontSize:13}}>
     <span style={{width:34,height:34,borderRadius:"50%",background:"#e8eef6",color:"#173b6b",display:"grid",placeItems:"center",overflow:"hidden",fontWeight:900}}>{photo?<img src={photo} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/>:initial}</span>
@@ -56,10 +65,12 @@ function ProfileButton(){
   </a>;
 }
 function MockButton(){
-  if(!isDashboard())return null;
+  const dashboard=useDashboardView();
+  if(!dashboard)return null;
   return <a href="/pre-mocks" style={{position:"fixed",left:18,bottom:18,zIndex:9998,background:"#172f55",color:"#fff",textDecoration:"none",padding:"12px 16px",borderRadius:999,boxShadow:"0 5px 18px rgba(25,45,80,.25)",fontWeight:800}}>📝 PRE MOCKS</a>;
 }
 export default function App({Component,pageProps}){
+  const dashboard=useDashboardView();
   useEffect(()=>{
     const trackLoggedStudent=()=>{
       try{
@@ -121,5 +132,5 @@ export default function App({Component,pageProps}){
     if(document.body)observer.observe(document.body,{subtree:true,childList:true,attributes:true,attributeFilter:["disabled","class"]});
     return()=>{clearInterval(loginTimer);clearInterval(timer);observer.disconnect();};
   },[]);
-  return <><Component {...pageProps}/><MockButton/><ProfileButton/><ChatButton/>{isDashboard()&&<StudentExperiencePopup/>}</>;
+  return <><Component {...pageProps}/><MockButton/><ProfileButton/><ChatButton/>{dashboard&&<StudentExperiencePopup/>}</>;
 }
