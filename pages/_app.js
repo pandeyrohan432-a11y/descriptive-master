@@ -121,5 +121,5 @@ export default function App({Component,pageProps}){
     if(document.body)observer.observe(document.body,{subtree:true,childList:true,attributes:true,attributeFilter:["disabled","class"]});
     return()=>{clearInterval(loginTimer);clearInterval(timer);observer.disconnect();};
   },[]);
-  return <><Component {...pageProps}/><MockButton/><ProfileButton/><ChatButton/><StudentExperiencePopup/></>;
+  return <><Component {...pageProps}/><MockButton/><ProfileButton/><ChatButton/>{isDashboard()&&<StudentExperiencePopup/>}</>;
 }
