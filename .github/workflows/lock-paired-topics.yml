@@ -1,0 +1,43 @@
+name: Keep paired mock topics
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+permissions:
+  contents: write
+jobs:
+  patch:
+    if: "!contains(github.event.head_commit.message, '[paired-essay]')"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Patch legacy topic updater
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re
+          p=Path('.github/workflows/update-mock-topics.yml')
+          s=p.read_text(encoding='utf-8')
+          topics='''const TOPICS=[
+           "Digital Banking and Cashless Economy||Financial Literacy in Rural India",
+           "Non-Performing Assets and Indian Banks||Gig Economy and Social Security",
+           "Digital Rupee and the Indian Economy||Privatization of Public Sector Banks",
+           "MSMEs and India's Economy||Fair Revenue Sharing Between Centre and States",
+           "Orange Economy and Employment||Attracting FDI in Manufacturing",
+           "Green Banking||Startups, Make in India and Youth Entrepreneurship",
+           "Artificial Intelligence and Employment||Cybercrime and Digital Transactions",
+           "Social Media and Mental Health of Youth||Deepfakes, Fake News and Democracy",
+           "5G and Its Benefits||E-Waste Management",
+           "Online Education vs Traditional Education||ISRO and India's Space Missions"
+          ];'''
+          s2,n=re.subn(r"topics = '''const TOPICS=\\[.*?\\];'''", "topics = '''"+topics+"'''", s, count=1, flags=re.S)
+          if n!=1:
+              raise SystemExit('Could not locate legacy TOPICS block')
+          p.write_text(s2,encoding='utf-8')
+          PY
+          git config user.name github-actions
+          git config user.email github-actions@github.com
+          git add .github/workflows/update-mock-topics.yml
+          if git diff --cached --quiet; then exit 0; fi
+          git commit -m "[paired-essay] Keep paired mock topics"
+          git push
