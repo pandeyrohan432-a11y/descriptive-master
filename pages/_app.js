@@ -2,10 +2,15 @@ import {useEffect,useState} from "react";
 import "../globals.css";
 import StudentExperiencePopup from "../components/StudentExperiencePopup";
 
+function isDashboard(){
+  return typeof window!=="undefined" && (window.location.pathname==="/" || window.location.pathname==="/dashboard");
+}
+
 function ChatButton(){
   const [student,setStudent]=useState(false);
   const [admin,setAdmin]=useState(false);
   useEffect(()=>{
+    if(!isDashboard()) return;
     let alive=true;
     try{
       const isAdmin=document.cookie.indexOf("dm_admin=1")!==-1;
@@ -18,8 +23,7 @@ function ChatButton(){
     }catch(e){}
     return()=>{alive=false;};
   },[]);
-  if(typeof window!=="undefined"&&(window.location.pathname==="/chat"||window.location.pathname==="/admin-chat"))return null;
-  if(!student&&!admin)return null;
+  if(!isDashboard()||(!student&&!admin))return null;
   return <div style={{position:"fixed",right:18,bottom:18,zIndex:9999,display:"flex",gap:8,flexDirection:"column",alignItems:"flex-end"}}>
     {student&&<a href="/chat" style={{background:"#3d78c2",color:"#fff",textDecoration:"none",padding:"12px 16px",borderRadius:999,boxShadow:"0 5px 18px rgba(25,45,80,.25)",fontWeight:700}}>💬 Chat with Admin</a>}
     {admin&&<a href="/admin-chat" style={{background:"#263a61",color:"#fff",textDecoration:"none",padding:"12px 16px",borderRadius:999,boxShadow:"0 5px 18px rgba(25,45,80,.25)",fontWeight:700}}>💬 Student Chats</a>}
@@ -28,6 +32,7 @@ function ChatButton(){
 function ProfileButton(){
   const [logged,setLogged]=useState(false),[name,setName]=useState("Student"),[photo,setPhoto]=useState("");
   useEffect(()=>{
+    if(!isDashboard()) return;
     const read=()=>{
       try{
         const ok=localStorage.getItem("dm_logged")==="1";
@@ -43,7 +48,7 @@ function ProfileButton(){
     const t=setInterval(read,1000);
     return()=>{window.removeEventListener("storage",read);clearInterval(t);};
   },[]);
-  if(!logged||typeof window!=="undefined"&&window.location.pathname==="/profile")return null;
+  if(!isDashboard()||!logged)return null;
   const initial=(name||"S").charAt(0).toUpperCase();
   return <a href="/profile" aria-label="Open profile" style={{position:"fixed",top:76,right:18,zIndex:9997,display:"flex",alignItems:"center",gap:9,padding:"7px 11px 7px 7px",borderRadius:999,background:"#fff",border:"1px solid #d9e0e8",boxShadow:"0 5px 18px rgba(25,45,80,.14)",textDecoration:"none",color:"#203552",fontWeight:800,fontSize:13}}>
     <span style={{width:34,height:34,borderRadius:"50%",background:"#e8eef6",color:"#173b6b",display:"grid",placeItems:"center",overflow:"hidden",fontWeight:900}}>{photo?<img src={photo} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/>:initial}</span>
@@ -51,7 +56,7 @@ function ProfileButton(){
   </a>;
 }
 function MockButton(){
-  if(typeof window!=="undefined"&&(window.location.pathname.startsWith("/pre-mocks")))return null;
+  if(!isDashboard())return null;
   return <a href="/pre-mocks" style={{position:"fixed",left:18,bottom:18,zIndex:9998,background:"#172f55",color:"#fff",textDecoration:"none",padding:"12px 16px",borderRadius:999,boxShadow:"0 5px 18px rgba(25,45,80,.25)",fontWeight:800}}>📝 PRE MOCKS</a>;
 }
 export default function App({Component,pageProps}){
