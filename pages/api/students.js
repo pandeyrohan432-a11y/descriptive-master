@@ -33,6 +33,12 @@ export default async function handler(req,res){
       return res.status(200).json({student:r.rows[0]});
     }
     if(req.method==="GET"){
+      if(req.query.phone){
+        const phone=cleanPhone(req.query.phone);
+        if(phone.length!==10) return res.status(400).json({error:"Invalid phone"});
+        const r=await db.query(`SELECT phone,name,first_login_at,last_login_at FROM dm_students WHERE phone=$1 LIMIT 1`,[phone]);
+        return res.status(200).json({exists:r.rowCount>0,student:r.rows[0]||null});
+      }
       if(req.query.admin!=="1" || !isAdmin(req)) return res.status(401).json({error:"Unauthorized"});
       const r=await db.query(`SELECT phone,name,first_login_at,last_login_at FROM dm_students ORDER BY last_login_at DESC LIMIT 5000`);
       return res.status(200).json({students:r.rows});
