@@ -19,13 +19,29 @@ const css=`*{box-sizing:border-box}body{margin:0;font-family:Inter,Arial,sans-se
 const words=s=>s.trim()?s.trim().split(/\s+/).length:0;
 
 export default function PairedHome(){
- const [view,setView]=useState("login"),[phone,setPhone]=useState(""),[otp,setOtp]=useState(""),[otpSent,setOtpSent]=useState(false),[name,setName]=useState(""),[test,setTest]=useState(1),[section,setSection]=useState("essay"),[agree,setAgree]=useState(false),[time,setTime]=useState(1800),[essay,setEssay]=useState(""),[selectedEssay,setSelectedEssay]=useState(""),[comp,setComp]=useState(["","","","",""]),[evaluation,setEvaluation]=useState(null),[busy,setBusy]=useState(false),[error,setError]=useState(""),[attempts,setAttempts]=useState({});
+ const [view,setView]=useState("login"),[phone,setPhone]=useState(""),[otp,setOtp]=useState(""),[otpSent,setOtpSent]=useState(false),[otpBusy,setOtpBusy]=useState(false),[name,setName]=useState(""),[test,setTest]=useState(1),[section,setSection]=useState("essay"),[agree,setAgree]=useState(false),[time,setTime]=useState(1800),[essay,setEssay]=useState(""),[selectedEssay,setSelectedEssay]=useState(""),[comp,setComp]=useState(["","","","",""]),[evaluation,setEvaluation]=useState(null),[busy,setBusy]=useState(false),[error,setError]=useState(""),[attempts,setAttempts]=useState({});
  useEffect(()=>{if(typeof window!=="undefined"&&localStorage.getItem("dm_logged")==="1"){setName(localStorage.getItem("dm_name")||"Student");setPhone(localStorage.getItem("dm_phone")||"");try{setAttempts(JSON.parse(localStorage.getItem("dm_attempts")||"{}"))}catch(e){}setView("dashboard")}},[]);
  useEffect(()=>{if(view!=="exam")return;const id=setInterval(()=>setTime(x=>Math.max(0,x-1)),1000);return()=>clearInterval(id)},[view]);
  useEffect(()=>{if(view==="exam"&&time===0)submit()},[time,view]);
  const opts=TOPICS[test-1]; const mm=String(Math.floor(time/60)).padStart(2,"0"),ss=String(time%60).padStart(2,"0");
- async function verify(){
-  if(otp!=="123456")return alert("Demo OTP is 123456");
+ async function sendOtp(){
+  if(phone.length!==10)return alert("Enter valid 10-digit mobile number");
+  setOtpBusy(true);
+  try{
+    const r=await fetch("/api/otp",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"send",phone})});
+    const d=await r.json();
+    if(!r.ok)throw new Error(d.error||"Could not send OTP");
+    setOtpSent(true);
+  }catch(e){alert(e.message||"Could not send OTP");}
+  finally{setOtpBusy(false)}
+}
+async function verify(){
+  if(otp.length!==6)return alert("Enter the 6-digit OTP");
+  setOtpBusy(true);
+  try{
+    const vr=await fetch("/api/otp",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"verify",phone,code:otp})});
+    const vd=await vr.json();
+    if(!vr.ok||!vd.verified)throw new Error(vd.error||"Invalid OTP");
   try{
     const r=await fetch(`/api/students?phone=${encodeURIComponent(phone)}`);
     const d=await r.json();
@@ -66,7 +82,7 @@ export default function PairedHome(){
  function begin(){if(!agree)return alert("Please accept the declaration.");setView("exam")}
  function next(){if(!selectedEssay)return alert("Select one essay topic.");setSection("comp")}
  async function submit(){if(busy)return;if(!selectedEssay)return alert("Select one essay topic.");setBusy(true);setError("");setView("evaluating");try{const r=await fetch("/api/ai-evaluate",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({essayTopic:selectedEssay,essay,passage:PASSAGE,questions:QUESTIONS,compAnswers:comp})});const j=await r.json();if(!r.ok)throw new Error(j.error||"Evaluation failed");setEvaluation(j.evaluation);const record={selectedEssay,essay,comp:[...comp],evaluation:j.evaluation,submittedAt:new Date().toISOString()};const updated={...attempts,[test]:record};setAttempts(updated);localStorage.setItem("dm_attempts",JSON.stringify(updated));try{await fetch("/api/attempts",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({id:`${phone}-test-${test}`,phone,name,testNo:test,submittedAt:new Date().toISOString(),essay,compAnswers:comp,evaluation:j.evaluation})})}catch(e){}setView("result")}catch(e){setError(e.message||"Evaluation failed");setView("result")}finally{setBusy(false)}}
- if(view==="login")return <><style>{css}</style><div className="login"><div className="brand" style={{color:"#40537d"}}>DESCRIPTIVE MASTER</div><h1>Student Login</h1><p style={{color:"#697386"}}>IBPS PO Descriptive Practice</p><label>Mobile Number</label><input className="input" value={phone} maxLength={10} onChange={e=>setPhone(e.target.value.replace(/\D/g,"").slice(0,10))} placeholder="10-digit mobile number"/>{!otpSent?<button className="btn primary" style={{width:"100%"}} onClick={()=>phone.length===10?setOtpSent(true):alert("Enter valid 10-digit mobile number")}>Send OTP</button>:<><label>OTP</label><input className="input" value={otp} maxLength={6} onChange={e=>setOtp(e.target.value.replace(/\D/g,"").slice(0,6))}/><p style={{fontSize:12,color:"#697386"}}>Demo OTP: 123456</p><button className="btn primary" style={{width:"100%"}} onClick={verify}>Verify & Continue</button></>}</div></>;
+ if(view==="login")return <><style>{css}</style><div className="login"><div className="brand" style={{color:"#40537d"}}>DESCRIPTIVE MASTER</div><h1>Student Login</h1><p style={{color:"#697386"}}>IBPS PO Descriptive Practice</p><label>Mobile Number</label><input className="input" value={phone} maxLength={10} onChange={e=>setPhone(e.target.value.replace(/\D/g,"").slice(0,10))} placeholder="10-digit mobile number"/>{!otpSent?<button className="btn primary" style={{width:"100%"}} onClick={sendOtp} disabled={otpBusy}>{otpBusy?"Sending…":"Send OTP"}</button>:<><label>OTP</label><input className="input" value={otp} maxLength={6} onChange={e=>setOtp(e.target.value.replace(/\D/g,"").slice(0,6))}/><p style={{fontSize:12,color:"#697386"}}>A verification code has been sent to your mobile number.</p><button className="btn primary" style={{width:"100%"}} onClick={verify} disabled={otpBusy}>{otpBusy?"Verifying…":"Verify & Continue"}</button></>}</div></>;
  if(view==="profile")return <><style>{css}</style><div className="login"><div className="brand" style={{color:"#40537d"}}>DESCRIPTIVE MASTER</div><h1>Complete Profile</h1><label>Name</label><input className="input" value={name} onChange={e=>setName(e.target.value)} placeholder="Your name"/><button className="btn primary" style={{width:"100%"}} onClick={saveProfile}>Continue</button></div></>;
  if(view==="instructions")return <><style>{css}</style><div className="wrap"><div className="panel"><h1>Test {test}</h1><h2>Instructions</h2><p>Time: 30 minutes · Total Marks: 25</p><p>Essay: 15 marks. Comprehension: 10 marks.</p><p>Essay length of 250–300 words is recommended, but it is not compulsory.</p><label><input type="checkbox" checked={agree} onChange={e=>setAgree(e.target.checked)}/> I have read and understood the instructions.</label><br/><br/><button className="btn primary" onClick={begin}>Start Mock</button></div></div></>;
  if(view==="evaluating")return <><style>{css}</style><div className="evalScreen"><div className="evalCard"><div className="spinner"></div><h1 className="evalTitle">Your answers are being evaluated</h1><p className="evalText">Please wait while Descriptive Master checks your essay and comprehension answers, calculates your marks, and prepares your detailed analysis.</p><span className="evalNote">⏳ Evaluation in progress — please do not refresh or close this page.</span></div></div></>;
