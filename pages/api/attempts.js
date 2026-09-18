@@ -32,6 +32,12 @@ export default async function handler(req,res){
     await ensureTable();
 
     if(req.method==="GET"){
+      if(req.query.phone){
+        const phone=cleanPhone(req.query.phone);
+        if(phone.length!==10) return res.status(400).json({error:"Invalid phone"});
+        const r=await db.query(`SELECT id,phone,name,test_no,submitted_at,essay,comp_answers,evaluation,error FROM dm_attempts WHERE phone=$1 ORDER BY submitted_at DESC`,[phone]);
+        return res.status(200).json({attempts:r.rows});
+      }
       if(req.query.admin!=="1" || !isAdmin(req)) return res.status(401).json({error:"Unauthorized"});
       const r=await db.query(`SELECT id,phone,name,test_no,submitted_at,essay,comp_answers,evaluation,error FROM dm_attempts ORDER BY submitted_at DESC LIMIT 1000`);
       return res.status(200).json({attempts:r.rows});
