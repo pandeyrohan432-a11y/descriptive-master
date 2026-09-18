@@ -35,6 +35,25 @@ export default function PairedHome(){
       localStorage.setItem("dm_logged","1");
       localStorage.setItem("dm_name",existingName);
       localStorage.setItem("dm_phone",phone);
+      try{
+        const ar=await fetch(`/api/attempts?phone=${encodeURIComponent(phone)}`);
+        const ad=await ar.json();
+        if(ar.ok){
+          const restored={};
+          (ad.attempts||[]).forEach(a=>{
+            const n=Number(a.test_no);
+            if(n&&!restored[n]) restored[n]={
+              selectedEssay:a.essay_topic||"",
+              essay:a.essay||"",
+              comp:Array.isArray(a.comp_answers)?a.comp_answers:["","","","",""],
+              evaluation:a.evaluation||null,
+              submittedAt:a.submitted_at
+            };
+          });
+          setAttempts(restored);
+          localStorage.setItem("dm_attempts",JSON.stringify(restored));
+        }
+      }catch(e){}
       setView("dashboard");
       return;
     }
@@ -46,7 +65,7 @@ export default function PairedHome(){
  function start(n){if(attempts[n])return openAttempt(n);setTest(n);setSection("essay");setAgree(false);setSelectedEssay("");setEssay("");setComp(["","","","",""]);setEvaluation(null);setError("");setBusy(false);setTime(1800);setView("instructions")}
  function begin(){if(!agree)return alert("Please accept the declaration.");setView("exam")}
  function next(){if(!selectedEssay)return alert("Select one essay topic.");setSection("comp")}
- async function submit(){if(busy)return;if(!selectedEssay)return alert("Select one essay topic.");setBusy(true);setError("");setView("evaluating");try{const r=await fetch("/api/ai-evaluate",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({essayTopic:selectedEssay,essay,passage:PASSAGE,questions:QUESTIONS,compAnswers:comp})});const j=await r.json();if(!r.ok)throw new Error(j.error||"Evaluation failed");setEvaluation(j.evaluation);const record={selectedEssay,essay,comp:[...comp],evaluation:j.evaluation,submittedAt:new Date().toISOString()};const updated={...attempts,[test]:record};setAttempts(updated);localStorage.setItem("dm_attempts",JSON.stringify(updated));try{await fetch("/api/attempts",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({phone,name,test_no:test,essay_topic:selectedEssay,essay,comp_answers:comp,evaluation:j.evaluation})})}catch(e){}setView("result")}catch(e){setError(e.message||"Evaluation failed");setView("result")}finally{setBusy(false)}}
+ async function submit(){if(busy)return;if(!selectedEssay)return alert("Select one essay topic.");setBusy(true);setError("");setView("evaluating");try{const r=await fetch("/api/ai-evaluate",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({essayTopic:selectedEssay,essay,passage:PASSAGE,questions:QUESTIONS,compAnswers:comp})});const j=await r.json();if(!r.ok)throw new Error(j.error||"Evaluation failed");setEvaluation(j.evaluation);const record={selectedEssay,essay,comp:[...comp],evaluation:j.evaluation,submittedAt:new Date().toISOString()};const updated={...attempts,[test]:record};setAttempts(updated);localStorage.setItem("dm_attempts",JSON.stringify(updated));try{await fetch("/api/attempts",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({id:`${phone}-test-${test}`,phone,name,testNo:test,submittedAt:new Date().toISOString(),essay,compAnswers:comp,evaluation:j.evaluation})})}catch(e){}setView("result")}catch(e){setError(e.message||"Evaluation failed");setView("result")}finally{setBusy(false)}}
  if(view==="login")return <><style>{css}</style><div className="login"><div className="brand" style={{color:"#40537d"}}>DESCRIPTIVE MASTER</div><h1>Student Login</h1><p style={{color:"#697386"}}>IBPS PO Descriptive Practice</p><label>Mobile Number</label><input className="input" value={phone} maxLength={10} onChange={e=>setPhone(e.target.value.replace(/\D/g,"").slice(0,10))} placeholder="10-digit mobile number"/>{!otpSent?<button className="btn primary" style={{width:"100%"}} onClick={()=>phone.length===10?setOtpSent(true):alert("Enter valid 10-digit mobile number")}>Send OTP</button>:<><label>OTP</label><input className="input" value={otp} maxLength={6} onChange={e=>setOtp(e.target.value.replace(/\D/g,"").slice(0,6))}/><p style={{fontSize:12,color:"#697386"}}>Demo OTP: 123456</p><button className="btn primary" style={{width:"100%"}} onClick={verify}>Verify & Continue</button></>}</div></>;
  if(view==="profile")return <><style>{css}</style><div className="login"><div className="brand" style={{color:"#40537d"}}>DESCRIPTIVE MASTER</div><h1>Complete Profile</h1><label>Name</label><input className="input" value={name} onChange={e=>setName(e.target.value)} placeholder="Your name"/><button className="btn primary" style={{width:"100%"}} onClick={saveProfile}>Continue</button></div></>;
  if(view==="instructions")return <><style>{css}</style><div className="wrap"><div className="panel"><h1>Test {test}</h1><h2>Instructions</h2><p>Time: 30 minutes · Total Marks: 25</p><p>Essay: 15 marks. Comprehension: 10 marks.</p><p>Essay length of 250–300 words is recommended, but it is not compulsory.</p><label><input type="checkbox" checked={agree} onChange={e=>setAgree(e.target.checked)}/> I have read and understood the instructions.</label><br/><br/><button className="btn primary" onClick={begin}>Start Mock</button></div></div></>;
