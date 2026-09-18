@@ -24,7 +24,23 @@ export default function PairedHome(){
  useEffect(()=>{if(view!=="exam")return;const id=setInterval(()=>setTime(x=>Math.max(0,x-1)),1000);return()=>clearInterval(id)},[view]);
  useEffect(()=>{if(view==="exam"&&time===0)submit()},[time,view]);
  const opts=TOPICS[test-1]; const mm=String(Math.floor(time/60)).padStart(2,"0"),ss=String(time%60).padStart(2,"0");
- function verify(){if(otp!=="123456")return alert("Demo OTP is 123456");setView("profile")}
+ async function verify(){
+  if(otp!=="123456")return alert("Demo OTP is 123456");
+  try{
+    const r=await fetch(`/api/students?phone=${encodeURIComponent(phone)}`);
+    const d=await r.json();
+    if(r.ok&&d.exists&&d.student){
+      const existingName=d.student.name||"Student";
+      setName(existingName);
+      localStorage.setItem("dm_logged","1");
+      localStorage.setItem("dm_name",existingName);
+      localStorage.setItem("dm_phone",phone);
+      setView("dashboard");
+      return;
+    }
+  }catch(e){}
+  setView("profile");
+}
  async function saveProfile(){if(name.trim().length<2)return alert("Enter your name");localStorage.setItem("dm_logged","1");localStorage.setItem("dm_name",name.trim());localStorage.setItem("dm_phone",phone);try{await fetch("/api/students",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({name:name.trim(),phone})})}catch(e){}setView("dashboard")}
  function openAttempt(n){const a=attempts[n];if(!a)return;setTest(n);setSelectedEssay(a.selectedEssay||"");setEssay(a.essay||"");setComp(a.comp||["","","","",""]);setEvaluation(a.evaluation||null);setError("");setView("result")}
  function start(n){if(attempts[n])return openAttempt(n);setTest(n);setSection("essay");setAgree(false);setSelectedEssay("");setEssay("");setComp(["","","","",""]);setEvaluation(null);setError("");setBusy(false);setTime(1800);setView("instructions")}
