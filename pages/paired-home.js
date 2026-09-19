@@ -43,7 +43,8 @@ export default function PairedHome(){
  }
  function resetAuth(){setAuthMode("choice");setAuthError("");setPassword("");}
  async function logout(){await fetch("/api/auth",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"logout"})}).catch(()=>{});localStorage.removeItem("dm_logged");localStorage.removeItem("dm_name");localStorage.removeItem("dm_phone");localStorage.removeItem("dm_attempts");setView("auth");setAuthMode("choice");setPassword("");}
- function navDashboard(tab){setDashboardTab(tab);setView("dashboard")}\n function openAttempt(n){const a=attempts[n];if(!a)return;setTest(n);setSelectedEssay(a.selectedEssay||"");setEssay(a.essay||"");setComp(a.comp||["","","","",""]);setEvaluation(a.evaluation||null);setError("");setView("result")}
+ function navDashboard(tab){setDashboardTab(tab);setView("dashboard")}
+ function openAttempt(n){const a=attempts[n];if(!a)return;setTest(n);setSelectedEssay(a.selectedEssay||"");setEssay(a.essay||"");setComp(a.comp||["","","","",""]);setEvaluation(a.evaluation||null);setError("");setView("result")}
  function start(n){if(attempts[n])return openAttempt(n);setTest(n);setSection("essay");setAgree(false);setSelectedEssay("");setEssay("");setComp(["","","","",""]);setEvaluation(null);setError("");setBusy(false);setTime(1800);setView("instructions")}
  function begin(){if(!agree)return alert("Please accept the declaration.");setView("exam")}
  function next(){if(!selectedEssay)return alert("Select one essay topic.");setSection("comp")}
