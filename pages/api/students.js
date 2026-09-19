@@ -1,4 +1,5 @@
 import { Pool } from "pg";
+import { getSessionUser } from "../../lib/session";
 
 let pool;
 function getPool(){
@@ -24,9 +25,12 @@ export default async function handler(req,res){
     const db=getPool();
     await ensureTable();
     if(req.method==="POST"){
+      const sessionUser=await getSessionUser(req);
+      if(!sessionUser) return res.status(401).json({error:"Unauthorized"});
       const phone=cleanPhone(req.body?.phone);
       const name=String(req.body?.name||"Student").trim().slice(0,100)||"Student";
       if(phone.length!==10) return res.status(400).json({error:"Invalid phone"});
+      if(sessionUser.phone!==phone) return res.status(403).json({error:"Forbidden"});
       const r=await db.query(`INSERT INTO dm_students(phone,name) VALUES($1,$2)
         ON CONFLICT(phone) DO UPDATE SET name=CASE WHEN EXCLUDED.name<>'Student' THEN EXCLUDED.name ELSE dm_students.name END,last_login_at=NOW()
         RETURNING phone,name,first_login_at,last_login_at`,[phone,name]);
@@ -35,8 +39,10 @@ export default async function handler(req,res){
     if(req.method==="GET"){
       if(req.query.phone){
         const phone=cleanPhone(req.query.phone);
+        const sessionUser=await getSessionUser(req);
         if(phone.length!==10) return res.status(400).json({error:"Invalid phone"});
-        const r=await db.query(`SELECT phone,name,first_login_at,last_login_at FROM dm_students WHERE phone=$1 LIMIT 1`,[phone]);
+        if(!sessionUser || sessionUser.phone!==phone) return res.status(401).json({error:"Unauthorized"});
+        const r=await db.query(`SELECT phone,name,email,exam_target,state,first_login_at,last_login_at FROM dm_students WHERE phone=$1 LIMIT 1`,[phone]);
         return res.status(200).json({exists:r.rowCount>0,student:r.rows[0]||null});
       }
       if(req.query.admin!=="1" || !isAdmin(req)) return res.status(401).json({error:"Unauthorized"});
