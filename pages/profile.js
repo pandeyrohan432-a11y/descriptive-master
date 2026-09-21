@@ -12,15 +12,34 @@ export default function Profile(){
     try{
       const ok=localStorage.getItem('dm_logged')==='1';
       setLogged(ok); if(!ok)return;
-      setName(localStorage.getItem('dm_name')||'Student');
-      setPhone((localStorage.getItem('dm_phone')||'').replace(/\D/g,''));
+      const savedName=localStorage.getItem('dm_name')||'Student';
+      const savedPhone=(localStorage.getItem('dm_phone')||'').replace(/\D/g,'');
+      setName(savedName); setPhone(savedPhone);
       const p=JSON.parse(localStorage.getItem(KEY)||'{}');
       setForm({...blank,...p});
       setPhoto(localStorage.getItem(KEY+'_photo')||'');
+
+      if(savedPhone.length===10){
+        fetch('/api/students?phone='+encodeURIComponent(savedPhone))
+          .then(r=>r.json())
+          .then(j=>{
+            if(!j?.student)return;
+            const s=j.student;
+            if(s.name){setName(s.name);localStorage.setItem('dm_name',s.name);}
+            setForm(f=>({
+              ...f,
+              email:s.email||f.email,
+              city:s.city||f.city,
+              state:s.state||f.state,
+              targetExam:s.exam_target||f.targetExam,
+              about:s.about||f.about
+            }));
+          }).catch(()=>{});
+      }
     }catch{}
   },[]);
 
-  const save=()=>{
+  const save=async()=>{
     const cleanName=name.trim()||'Student';
     setName(cleanName);
     localStorage.setItem('dm_name',cleanName);
@@ -28,7 +47,22 @@ export default function Profile(){
     if(photo)localStorage.setItem(KEY+'_photo',photo); else localStorage.removeItem(KEY+'_photo');
     setSaved(true); setTimeout(()=>setSaved(false),2200);
     try{
-      if(phone.length===10) fetch('/api/students',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({phone,name:cleanName})}).catch(()=>{});
+      if(phone.length===10){
+        const r=await fetch('/api/students',{
+          method:'POST',
+          headers:{'Content-Type':'application/json'},
+          body:JSON.stringify({
+            phone,
+            name:cleanName,
+            email:form.email,
+            city:form.city,
+            state:form.state,
+            examTarget:form.targetExam,
+            about:form.about
+          })
+        });
+        if(!r.ok) throw new Error('Profile sync failed');
+      }
     }catch{}
   };
 
