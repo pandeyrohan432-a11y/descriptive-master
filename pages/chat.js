@@ -2,7 +2,7 @@ import {useEffect,useRef,useState} from "react";
 
 export default function Chat(){
   const [phone,setPhone]=useState("");
-  const [mode,setMode]=useState("admin");
+  const [mode,setMode]=useState("group");\n  const [chatBlocked,setChatBlocked]=useState(false);
   const [name,setName]=useState("Student");
   const [messages,setMessages]=useState([]);
   const [text,setText]=useState("");
@@ -61,7 +61,7 @@ export default function Chat(){
           setTimeout(function(){setNotice("");},4000);
         }
         if(latest)lastIncoming.current=latest.id;
-        setMessages(list);setError("");firstLoad.current=false;
+        setMessages(list);if(mode==="group")setChatBlocked(!!j.chatBlocked);setError("");firstLoad.current=false;
       }catch(e){if(!stopped)setError("Unable to connect to chat");}
     }
     load();var id=setInterval(load,3000);
@@ -88,14 +88,14 @@ export default function Chat(){
   return <div style={styles.page}>
     <div style={styles.top}><b>DESCRIPTIVE MASTER</b><a href="/" style={styles.link}>← Dashboard</a></div>
     <div style={styles.wrap}><div style={styles.card}>
-      <div style={styles.head}><div><b>{mode==="group"?"Student Community":"Chat with Admin"}</b><span style={styles.sub}> • {mode==="group"?"All logged-in students":"Private chat"}</span></div><div style={{display:"flex",gap:7}}><button onClick={()=>setMode("admin")} style={{...styles.tab,...(mode==="admin"?styles.tabOn:{})}}>Admin</button><button onClick={()=>setMode("group")} style={{...styles.tab,...(mode==="group"?styles.tabOn:{})}}>👥 Group</button></div><button onClick={enableNotifications} style={styles.notify}>{notif==="granted"?"🔔 Notifications On":"🔔 Enable Notifications"}</button></div>
+      <div style={styles.head}><div><b>{mode==="group"?"Student Community":"Chat with Admin"}</b><span style={styles.sub}> • {mode==="group"?"All logged-in students":"Private chat"}</span></div><div style={{display:"flex",gap:7}}><button onClick={()=>setMode("group")} style={{...styles.tab,...styles.tabOn}}>👥 Group</button> style={{display:"none"}}>👥 Group</button></div><button onClick={enableNotifications} style={styles.notify}>{notif==="granted"?"🔔 Notifications On":"🔔 Enable Notifications"}</button></div>
       {notice&&<div style={styles.notice}>🔔 {notice}</div>}
       <div style={styles.messages}>
         {messages.length===0?<div style={styles.empty}>No messages yet. Send a message to contact the admin.</div>:messages.map(function(m){return <div key={m.id} style={{display:"flex",justifyContent:m.sender==="student"?"flex-end":"flex-start"}}><div style={{...styles.bubble,background:m.sender==="student"?"#dcecff":"#fff"}}>{mode==="group"&&<div style={{fontSize:11,fontWeight:800,color:m.sender==="admin"?"#315d9b":"#56657c",marginBottom:3}}>{m.sender==="admin"?"Admin":(m.name||"Student")}</div>}<div>{m.message}</div><div style={styles.time}>{new Date(m.created_at).toLocaleString("en-IN")}</div></div></div>;})}
         <div ref={bottom}/>
       </div>
       {error&&<div style={styles.error}>{error}</div>}
-      <div style={styles.composer}><input style={styles.input} value={text} onChange={function(e){setText(e.target.value.slice(0,2000));}} onKeyDown={function(e){if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();send();}}} placeholder={mode==="group"?"Message the student group...":"Type your message..."}/><button style={styles.button} disabled={busy} onClick={send}>{busy?"Sending...":"Send"}</button></div>
+      <div style={styles.composer}>{chatBlocked?<div style={styles.blocked}>🚫 You have been blocked from the student group chat by the admin.</div>:<><input style={styles.input} value={text} onChange={function(e){setText(e.target.value.slice(0,2000));}} onKeyDown={function(e){if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();send();}}} placeholder={mode==="group"?"Message the student group...":"Type your message..."}/><button style={styles.button} disabled={busy} onClick={send}>{busy?"Sending...":"Send"}</button></div>
     </div></div>
   </div>;
 }
