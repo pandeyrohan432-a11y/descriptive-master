@@ -10,6 +10,17 @@ function isAdmin(req){return /(?:^|;\s*)dm_admin=1(?:;|$)/.test(req.headers.cook
 function cleanPhone(v){return String(v||"").replace(/\D/g,"");}
 async function ensureTable(){
   const db=getPool();
+  await db.query(`CREATE TABLE IF NOT EXISTS dm_students (
+    phone TEXT PRIMARY KEY,
+    name TEXT,
+    email TEXT,
+    city TEXT,
+    state TEXT,
+    exam_target TEXT DEFAULT 'IBPS PO',
+    about TEXT,
+    first_login_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    last_login_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  )`);
   await db.query(`CREATE TABLE IF NOT EXISTS dm_chat_messages (
     id TEXT PRIMARY KEY,
     phone TEXT NOT NULL,
