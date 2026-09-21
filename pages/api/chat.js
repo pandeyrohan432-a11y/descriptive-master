@@ -47,7 +47,27 @@ export default async function handler(req,res){
           return res.status(200).json({messages:r.rows});
         }
         // Keep students in a stable order. New messages must NOT reorder the list.
-        const r=await db.query(`SELECT s.phone,s.name,MAX(m.created_at) AS last_message,(array_agg(m.sender ORDER BY m.created_at DESC))[1] AS last_sender,COUNT(m.id)::int AS message_count FROM dm_students s LEFT JOIN dm_chat_messages m ON m.phone=s.phone GROUP BY s.phone,s.name ORDER BY MAX(m.created_at) DESC NULLS LAST,s.name ASC NULLS LAST,s.phone ASC LIMIT 100`);
+        const r=await db.query(`
+          SELECT
+            COALESCE(s.phone,a.phone) AS phone,
+            COALESCE(NULLIF(s.name,''),NULLIF(a.name,''),'Student') AS name,
+            MAX(m.created_at) AS last_message,
+            (array_agg(m.sender ORDER BY m.created_at DESC))[1] AS last_sender,
+            COUNT(m.id)::int AS message_count
+          FROM (
+            SELECT DISTINCT ON (phone) phone,name,updated_at,created_at
+            FROM dm_access_requests
+            WHERE status='approved'
+            ORDER BY phone,updated_at DESC
+          ) a
+          FULL OUTER JOIN dm_students s ON s.phone=a.phone
+          LEFT JOIN dm_chat_messages m ON m.phone=COALESCE(s.phone,a.phone)
+          GROUP BY COALESCE(s.phone,a.phone),COALESCE(NULLIF(s.name,''),NULLIF(a.name,''),'Student')
+          ORDER BY MAX(m.created_at) DESC NULLS LAST,
+                   COALESCE(NULLIF(s.name,''),NULLIF(a.name,''),'Student') ASC,
+                   COALESCE(s.phone,a.phone) ASC
+          LIMIT 100
+        `);
         return res.status(200).json({students:r.rows});
       }
       const phone=cleanPhone(req.query.phone);
