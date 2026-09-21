@@ -62,7 +62,7 @@ export default function Chat(){
           setTimeout(function(){setNotice("");},4000);
         }
         if(latest)lastIncoming.current=latest.id;
-        setMessages(list);if(mode==="group")setChatBlocked(!!j.chatBlocked);setError("");firstLoad.current=false;
+        setMessages(list);if(mode==="group"){setChatBlocked(!!j.chatBlocked);if(list.length){try{window.localStorage.setItem("dm_group_last_read_id",String(list[list.length-1].id));}catch(e){}}}setError("");firstLoad.current=false;
       }catch(e){if(!stopped)setError("Unable to connect to chat");}
     }
     load();var id=setInterval(load,3000);
