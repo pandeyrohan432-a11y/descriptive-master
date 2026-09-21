@@ -58,8 +58,8 @@ export default function PairedHome(){
  if(view==="dashboard")return (<><style>{css}</style><div className="dashboardPage"><div className="dashboardShell"><aside className="dashSidebar">
   <div className="sideBrand">👑 Descriptive Master<div className="sideSub">Write. Improve. Succeed.</div></div>
   {[
-    ["dashboard","▣","Dashboard"],["mocks","▤","Mock Tests"],["attempts","↗","My Attempts"],["performance","⌁","Performance"],["materials","▱","Study Material"],["profile","♙","Profile"]
-  ].map(([tab,icon,label])=><div key={tab} className={"navItem "+(dashboardTab===tab?"active":"")} onClick={()=>navDashboard(tab)}>{icon}<span>{label}</span></div>)}
+    ["dashboard","▣","Dashboard"],["mocks","▤","Mock Tests"],["attempts","↗","My Attempts"],["performance","⌁","Performance"],["materials","▱","Study Material"],["profile","♙","Profile"],["chat","💬","Student Chat"]
+  ].map(([tab,icon,label])=><div key={tab} className={"navItem "+(dashboardTab===tab?"active":"")} onClick={()=>tab==="chat"?(window.location.href="/chat"):navDashboard(tab)}>{icon}<span>{label}</span></div>)}
   <div className="navItem" onClick={logout}>⇥ <span>Log Out</span></div>
   <div className="sideQuote">“A little progress every day adds up to big results.”<br/><br/>Keep showing up. ✦</div>
  </aside><main className="dashMain"><div className="dashTopbar"><span>🔔</span><div className="profileChip"><div className="profileAvatar">{String(name||"R").charAt(0).toUpperCase()}</div><div><b>{name||"Student"}</b><div className="profileMeta">{examTarget||"Banking Aspirant"}</div></div></div></div><div className="dashContent">
