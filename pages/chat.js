@@ -2,7 +2,6 @@ import {useEffect,useRef,useState} from "react";
 
 export default function Chat(){
   const [phone,setPhone]=useState("");
-  const [mode,setMode]=useState("group");
   const [chatBlocked,setChatBlocked]=useState(false);
   const [name,setName]=useState("Student");
   const [messages,setMessages]=useState([]);
@@ -48,13 +47,13 @@ export default function Chat(){
     var stopped=false;
     async function load(){
       try{
-        var endpoint=mode==="group"?"/api/group-chat?phone="+encodeURIComponent(phone):"/api/chat?phone="+encodeURIComponent(phone);
+        var endpoint="/api/group-chat?phone="+encodeURIComponent(phone);
         var r=await fetch(endpoint);
         var j=await r.json();
         if(stopped)return;
         if(!r.ok){setError(j.error||"Unable to load chat");return;}
         var list=Array.isArray(j.messages)?j.messages:[];
-        var incoming=list.filter(function(m){return mode==="group"?m.sender==="admin":m.sender==="admin";});
+        var incoming=list.filter(function(m){return m.sender==="admin" || String(m.phone||"")!==String(phone);});
         var latest=incoming.length?incoming[incoming.length-1]:null;
         if(!firstLoad.current&&latest&&latest.id!==lastIncoming.current){
           setNotice("New message from Admin");
@@ -62,12 +61,12 @@ export default function Chat(){
           setTimeout(function(){setNotice("");},4000);
         }
         if(latest)lastIncoming.current=latest.id;
-        setMessages(list);if(mode==="group"){setChatBlocked(!!j.chatBlocked);if(list.length){try{window.localStorage.setItem("dm_group_last_read_id",String(list[list.length-1].id));}catch(e){}}}setError("");firstLoad.current=false;
+        setMessages(list);setChatBlocked(!!j.chatBlocked);if(list.length){try{window.localStorage.setItem("dm_group_last_read_id",String(list[list.length-1].id));}catch(e){}}setError("");firstLoad.current=false;
       }catch(e){if(!stopped)setError("Unable to connect to chat");}
     }
     load();var id=setInterval(load,3000);
     return function(){stopped=true;clearInterval(id);};
-  },[phone,mode]);
+  },[phone]);
 
   useEffect(function(){
     if(bottom.current&&typeof bottom.current.scrollIntoView==="function")bottom.current.scrollIntoView({behavior:"smooth"});
@@ -77,7 +76,7 @@ export default function Chat(){
     if(!text.trim()||busy||phone.length!==10)return;
     setBusy(true);setError("");
     try{
-      var endpoint=mode==="group"?"/api/group-chat":"/api/chat";
+      var endpoint="/api/group-chat";
       var r=await fetch(endpoint,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({phone:phone,name:name,message:text.trim()})});
       var j=await r.json();
       if(!r.ok)throw new Error(j.error||"Message failed");
