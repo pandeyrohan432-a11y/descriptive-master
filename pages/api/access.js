@@ -48,6 +48,29 @@ export default async function handler(req,res){
         const status=action==="approve"?"approved":"rejected";
         const r=await db.query(`UPDATE dm_access_requests SET status=$1,updated_at=NOW() WHERE id=$2 RETURNING *`,[status,id]);
         if(!r.rowCount) return res.status(404).json({error:"Request not found"});
+        if(status==="approved"){
+          const q=r.rows[0];
+          await db.query(`CREATE TABLE IF NOT EXISTS dm_students (
+            phone TEXT PRIMARY KEY,
+            name TEXT,
+            email TEXT,
+            city TEXT,
+            state TEXT,
+            exam_target TEXT DEFAULT 'IBPS PO',
+            about TEXT,
+            first_login_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+            last_login_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+          )`);
+          await db.query(`ALTER TABLE dm_students ADD COLUMN IF NOT EXISTS email TEXT`);
+          await db.query(`ALTER TABLE dm_students ADD COLUMN IF NOT EXISTS city TEXT`);
+          await db.query(`ALTER TABLE dm_students ADD COLUMN IF NOT EXISTS state TEXT`);
+          await db.query(`ALTER TABLE dm_students ADD COLUMN IF NOT EXISTS exam_target TEXT DEFAULT 'IBPS PO'`);
+          await db.query(`ALTER TABLE dm_students ADD COLUMN IF NOT EXISTS about TEXT`);
+          await db.query(`INSERT INTO dm_students(phone,name)
+            VALUES($1,$2)
+            ON CONFLICT(phone) DO UPDATE SET name=CASE WHEN EXCLUDED.name IS NOT NULL AND EXCLUDED.name<>'' THEN EXCLUDED.name ELSE dm_students.name END`,
+            [String(q.phone||"").replace(/\D/g,""),q.name||"Student"]);
+        }
         return res.status(200).json({request:r.rows[0]});
       }
 
