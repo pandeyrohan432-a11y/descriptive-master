@@ -84,8 +84,23 @@ export default async function handler(req,res){
         return res.status(200).json({exists:r.rowCount>0,student:r.rows[0]||null});
       }
       if(req.query.admin!=="1" || !isAdmin(req)) return res.status(401).json({error:"Unauthorized"});
-      const r=await db.query(`SELECT phone,name,email,city,state,exam_target,about,first_login_at,last_login_at
-        FROM dm_students ORDER BY last_login_at DESC LIMIT 5000`);
+      const r=await db.query(`
+        SELECT
+          COALESCE(s.phone,a.phone) AS phone,
+          COALESCE(NULLIF(s.name,''),NULLIF(a.name,''),'Student') AS name,
+          s.email,s.city,s.state,s.exam_target,s.about,
+          s.first_login_at,
+          COALESCE(s.last_login_at,a.updated_at,a.created_at) AS last_login_at
+        FROM (
+          SELECT DISTINCT ON (phone) phone,name,updated_at,created_at
+          FROM dm_access_requests
+          WHERE status='approved'
+          ORDER BY phone,updated_at DESC
+        ) a
+        FULL OUTER JOIN dm_students s ON s.phone=a.phone
+        ORDER BY COALESCE(s.last_login_at,a.updated_at,a.created_at) DESC NULLS LAST
+        LIMIT 5000
+      `);
       return res.status(200).json({students:r.rows});
     }
 
