@@ -2,7 +2,8 @@ import {useEffect,useRef,useState} from "react";
 
 export default function Chat(){
   const [phone,setPhone]=useState("");
-  const [mode,setMode]=useState("group");\n  const [chatBlocked,setChatBlocked]=useState(false);
+  const [mode,setMode]=useState("group");
+  const [chatBlocked,setChatBlocked]=useState(false);
   const [name,setName]=useState("Student");
   const [messages,setMessages]=useState([]);
   const [text,setText]=useState("");
