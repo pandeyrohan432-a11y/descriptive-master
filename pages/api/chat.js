@@ -19,8 +19,8 @@ async function ensureTable(){
   )`);
   await db.query(`CREATE INDEX IF NOT EXISTS dm_chat_phone_idx ON dm_chat_messages(phone,created_at)`);
 }
-async function approved(db,phone){
-  const r=await db.query(`SELECT 1 FROM dm_access_requests WHERE phone=$1 AND status='approved' LIMIT 1`,[phone]);
+async function studentExists(db,phone){
+  const r=await db.query(`SELECT 1 FROM dm_students WHERE phone=$1 LIMIT 1`,[phone]);
   return !!r.rowCount;
 }
 export default async function handler(req,res){
@@ -31,17 +31,17 @@ export default async function handler(req,res){
       if(admin){
         const phone=cleanPhone(req.query.phone);
         if(phone){
-          if(!(await approved(db,phone))) return res.status(403).json({error:"Student does not have approved access"});
+          if(!(await studentExists(db,phone))) return res.status(403).json({error:"Student is not registered as a logged-in student"});
           const r=await db.query(`SELECT id,phone,sender,message,created_at FROM dm_chat_messages WHERE phone=$1 ORDER BY created_at ASC LIMIT 300`,[phone]);
           return res.status(200).json({messages:r.rows});
         }
         // Keep students in a stable order. New messages must NOT reorder the list.
-        const r=await db.query(`SELECT a.phone,MAX(a.name) AS name,MAX(m.created_at) AS last_message,(array_agg(m.sender ORDER BY m.created_at DESC))[1] AS last_sender,COUNT(m.id)::int AS message_count FROM dm_access_requests a LEFT JOIN dm_chat_messages m ON m.phone=a.phone WHERE a.status='approved' GROUP BY a.phone ORDER BY MAX(a.name) ASC NULLS LAST, a.phone ASC LIMIT 100`);
+        const r=await db.query(`SELECT s.phone,s.name,MAX(m.created_at) AS last_message,(array_agg(m.sender ORDER BY m.created_at DESC))[1] AS last_sender,COUNT(m.id)::int AS message_count FROM dm_students s LEFT JOIN dm_chat_messages m ON m.phone=s.phone GROUP BY s.phone,s.name ORDER BY MAX(m.created_at) DESC NULLS LAST,s.name ASC NULLS LAST,s.phone ASC LIMIT 100`);
         return res.status(200).json({students:r.rows});
       }
       const phone=cleanPhone(req.query.phone);
       if(phone.length!==10) return res.status(400).json({error:"Invalid phone"});
-      if(!(await approved(db,phone))) return res.status(403).json({error:"Chat is available after access approval"});
+      if(!(await studentExists(db,phone))) return res.status(403).json({error:"Chat is available for logged-in students"});
       const r=await db.query(`SELECT id,phone,sender,message,created_at FROM dm_chat_messages WHERE phone=$1 ORDER BY created_at ASC LIMIT 300`,[phone]);
       return res.status(200).json({messages:r.rows});
     }
@@ -53,9 +53,9 @@ export default async function handler(req,res){
       if(admin){
         if(phone.length!==10) return res.status(400).json({error:"Invalid student phone"});
       }else{
-        if(phone.length!==10 || !(await approved(db,phone))) return res.status(403).json({error:"Chat is available after access approval"});
+        if(phone.length!==10 || !(await studentExists(db,phone))) return res.status(403).json({error:"Chat is available after access approval"});
       }
-      if(!(await approved(db,phone))) return res.status(403).json({error:"Student does not have approved access"});
+      if(!(await studentExists(db,phone))) return res.status(403).json({error:"Student does not have approved access"});
       const id=`msg_${Date.now()}_${Math.random().toString(36).slice(2,9)}`;
       const r=await db.query(`INSERT INTO dm_chat_messages(id,phone,sender,message) VALUES($1,$2,$3,$4) RETURNING id,phone,sender,message,created_at`,[id,phone,sender,message]);
       return res.status(201).json({message:r.rows[0]});
