@@ -5,11 +5,12 @@ function clamp(n, min, max) {
   return Math.max(min, Math.min(max, Number(n) || 0));
 }
 
-function normalise(result) {
+function normalise(result, submittedAnswers = []) {
   const essay = result?.essay || {};
-  const comp = Array.isArray(result?.comprehension) ? result.comprehension : [];
+  const rawComp = Array.isArray(result?.comprehension) ? result.comprehension : [];
+  const comp = Array.from({ length: 5 }, (_, i) => rawComp[i] || {});
   const essayScore = clamp(essay.score, 0, 15);
-  const comprehensionScore = clamp(comp.slice(0, 5).reduce((sum, x) => sum + clamp(x.score, 0, 2), 0), 0, 10);
+  const comprehensionScore = clamp(comp.reduce((sum, x) => sum + clamp(x.score, 0, 2), 0), 0, 10);
   const totalScore = Number((essayScore + comprehensionScore).toFixed(1));
   return {
     essayScore: Number(essayScore.toFixed(1)), comprehensionScore: Number(comprehensionScore.toFixed(1)), totalScore,
@@ -26,7 +27,16 @@ function normalise(result) {
       modelAnswer: essay.modelAnswer || "",
       suggestedStructure: essay.suggestedStructure || ""
     },
-    comprehension: comp.slice(0, 5).map((x, i) => ({ questionNo: i + 1, score: Number(clamp(x.score, 0, 2).toFixed(1)), studentAnswer: x.studentAnswer || "", whatWasRight: x.whatWasRight || "", whatWasWrong: x.whatWasWrong || "", idealAnswer: x.idealAnswer || "", wordCount: Number(x.wordCount) || 0, wordLimitStatus: x.wordLimitStatus || "" })),
+    comprehension: comp.map((x, i) => ({
+      questionNo: i + 1,
+      score: Number(clamp(x.score, 0, 2).toFixed(1)),
+      studentAnswer: x.studentAnswer || submittedAnswers[i] || "",
+      whatWasRight: x.whatWasRight || "",
+      whatWasWrong: x.whatWasWrong || (rawComp[i] ? "" : "This question was not returned by the evaluator."),
+      idealAnswer: x.idealAnswer || "",
+      wordCount: Number(x.wordCount) || 0,
+      wordLimitStatus: x.wordLimitStatus || ""
+    })),
     overallFeedback: result?.overallFeedback || "", keyImprovements: Array.isArray(result?.keyImprovements) ? result.keyImprovements : []
   };
 }
@@ -88,7 +98,9 @@ Return only JSON matching the supplied schema. TEST DATA: ${JSON.stringify(paylo
         const text = result.data?.candidates?.[0]?.content?.parts?.map(p => p.text || "").join("").trim();
         if (!text) continue;
         try {
-          return res.status(200).json({ evaluation: normalise(JSON.parse(text)), model, provider: "Google Gemini" });
+          const parsed = JSON.parse(text);
+          if (!Array.isArray(parsed.comprehension) || parsed.comprehension.length < 5) continue;
+          return res.status(200).json({ evaluation: normalise(parsed, compAnswers.slice(0, 5)), model, provider: "Google Gemini" });
         } catch (parseError) {
           continue;
         }
