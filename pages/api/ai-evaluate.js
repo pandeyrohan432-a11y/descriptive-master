@@ -63,14 +63,62 @@ function isRetryableError(status, data) {
 
 async function callGemini(model, prompt) {
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(process.env.GEMINI_API_KEY)}`;
-  for (let attempt = 0; attempt < 2; attempt++) {
-    const response = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ contents: [{ role: "user", parts: [{ text: prompt }] }], generationConfig: { responseMimeType: "application/json", responseSchema, maxOutputTokens: 9000 } }) });
-    const data = await response.json();
-    if (response.ok) return { data, model };
-    if (!isRetryableError(response.status, data) || attempt === 1) return { error: data?.error?.message || "Gemini evaluation failed.", status: response.status };
-    await new Promise(resolve => setTimeout(resolve, 1200));
+  const baseBody = {
+    contents: [{ role: "user", parts: [{ text: prompt }] }]
+  };
+
+  // Try structured JSON first. If Google's schema validation rejects the request,
+  // retry the same model without the schema and parse the JSON ourselves.
+  const bodies = [
+    {
+      ...baseBody,
+      generationConfig: {
+        responseMimeType: "application/json",
+        responseSchema,
+        maxOutputTokens: 9000
+      }
+    },
+    {
+      ...baseBody,
+      generationConfig: {
+        responseMimeType: "application/json",
+        maxOutputTokens: 9000
+      }
+    }
+  ];
+
+  let lastError = "";
+  for (let bodyIndex = 0; bodyIndex < bodies.length; bodyIndex++) {
+    for (let attempt = 0; attempt < 2; attempt++) {
+      const response = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(bodies[bodyIndex])
+      });
+
+      let data = {};
+      try {
+        data = await response.json();
+      } catch (_) {
+        data = {};
+      }
+
+      if (response.ok) return { data, model };
+      lastError = data?.error?.message || `Gemini request failed (HTTP ${response.status}).`;
+
+      // A 400 from the structured-output request can be caused by schema/model
+      // compatibility. Retry the same model once without responseSchema.
+      const schemaFallback = bodyIndex === 0 && response.status === 400;
+      if (schemaFallback) break;
+
+      if (!isRetryableError(response.status, data) || attempt === 1) {
+        return { error: lastError, status: response.status };
+      }
+      await new Promise(resolve => setTimeout(resolve, 1200));
+    }
   }
-  return { error: "Gemini evaluation failed.", status: 503 };
+
+  return { error: lastError || "Gemini evaluation failed.", status: 503 };
 }
 
 export default async function handler(req, res) {
@@ -99,8 +147,15 @@ Return only JSON matching the supplied schema. TEST DATA: ${JSON.stringify(paylo
         const text = result.data?.candidates?.[0]?.content?.parts?.map(p => p.text || "").join("").trim();
         if (!text) continue;
         try {
-          const parsed = JSON.parse(text);
-          if (!Array.isArray(parsed.comprehension) || parsed.comprehension.length < 5) continue;
+          const cleaned = text
+            .replace(/^\s*\`\`\`(?:json)?\s*/i, "")
+            .replace(/\s*\`\`\`\s*$/i, "")
+            .trim();
+          const parsed = JSON.parse(cleaned);
+          if (!Array.isArray(parsed.comprehension) || parsed.comprehension.length < 5) {
+            lastError = `${model}: Gemini returned fewer than 5 comprehension evaluations`;
+            continue;
+          }
           return res.status(200).json({ evaluation: normalise(parsed, compAnswers.slice(0, 5)), model, provider: "Google Gemini" });
         } catch (parseError) {
           lastError = `${model}: Gemini returned invalid JSON`;
