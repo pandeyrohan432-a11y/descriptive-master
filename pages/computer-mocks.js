@@ -4,9 +4,31 @@ const css=`*{box-sizing:border-box}body{margin:0;font-family:Inter,Arial,sans-se
 
 export default function ComputerMocks(){
  const [attempted,setAttempted]=useState({});
- useEffect(()=>{const a={};for(let i=1;i<=17;i++){try{a[i]=!!localStorage.getItem(`dm_computer_mock_${i}_attempt`)}catch(e){}}setAttempted(a)},[]);
+ useEffect(()=>{
+  const a={};
+  for(let i=1;i<=17;i++){
+   try{a[i]=!!localStorage.getItem(`dm_computer_mock_${i}_attempt`)}catch(e){}
+  }
+  setAttempted(a);
+ },[]);
  return <div className="page"><style>{css}</style><div className="wrap">
- <button className="back" onClick={()=>window.location.href="/paired-home"}>← Back to Mock Tests</button>
- <div className="kicker">COMPUTER AWARENESS</div>
- <div className="head"><div><h1>Computer Mock Tests</h1><p>17 mixed-topic mocks • 40 questions each • 15 minutes • 0.25 negative marking</p></div><div className="count">17 Mocks · 680 Questions</div></div>
- <div className="grid">{Array.from({length:17},(_,i)=>{const n=i+1,done=attempted[n],comingSoon=n>=4;return <div className="card" key={n}><span className="badge">{comingSoon?"COMING SOON":done?"ATTEMPTED":"AVAILABLE"}</span><h3>Mock Test {n}</h3>{comingSoon?<button className="btn" disabled style={{opacity:.55,cursor:"not-allowed"}}>Coming Soon</button>:<button className="btn" onClick={()=>window.location.href=`/computer-mock-\${n}`}>{done?"View Analysis →":"Start Mock →"}</button>}</div>})}</div>}
+  <button className="back" onClick={()=>window.location.href="/paired-home"}>← Back to Mock Tests</button>
+  <div className="kicker">COMPUTER AWARENESS</div>
+  <div className="head">
+   <div><h1>Computer Mock Tests</h1><p>17 mixed-topic mocks • 40 questions each • 15 minutes • 0.25 negative marking</p></div>
+   <div className="count">17 Mocks · 680 Questions</div>
+  </div>
+  <div className="grid">
+   {Array.from({length:17},(_,i)=>{
+    const n=i+1,done=attempted[n],comingSoon=n>=4;
+    return <div className="card" key={n}>
+     <span className="badge">{comingSoon?"COMING SOON":done?"ATTEMPTED":"AVAILABLE"}</span>
+     <h3>Mock Test {n}</h3>
+     {comingSoon
+      ? <button className="btn" disabled style={{opacity:.55,cursor:"not-allowed"}}>Coming Soon</button>
+      : <button className="btn" onClick={()=>window.location.href="/computer-mock-"+n}>{done?"View Analysis →":"Start Mock →"}</button>}
+    </div>;
+   })}
+  </div>
+ </div></div>;
+}
