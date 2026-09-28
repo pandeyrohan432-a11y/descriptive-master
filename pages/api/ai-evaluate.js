@@ -144,8 +144,13 @@ Return only JSON matching the supplied schema. TEST DATA: ${JSON.stringify(paylo
       const result = await callGemini(model, prompt);
       if (result.error) lastError = `${model}: ${result.error}`;
       if (result.data) {
-        const text = result.data?.candidates?.[0]?.content?.parts?.map(p => p.text || "").join("").trim();
-        if (!text) continue;
+        const candidate = result.data?.candidates?.[0];
+        const text = candidate?.content?.parts?.map(p => p.text || "").join("").trim();
+        if (!text) {
+          const finishReason = candidate?.finishReason || result.data?.promptFeedback?.blockReason || "NO_TEXT";
+          lastError = `${model}: Gemini returned no evaluable text (${finishReason})`;
+          continue;
+        }
         try {
           const cleaned = text
             .replace(/^\s*\`\`\`(?:json)?\s*/i, "")
@@ -164,7 +169,7 @@ Return only JSON matching the supplied schema. TEST DATA: ${JSON.stringify(paylo
       }
     }
     console.error("All Gemini evaluation models failed:", lastError);
-    return res.status(503).json({ error: "AI evaluation is temporarily unavailable. Please try again in a few seconds." });
+    return res.status(503).json({ error: `AI evaluation failed: ${lastError || "No usable response from Gemini."}` });
   } catch (error) {
     console.error("Gemini evaluation error", error);
     return res.status(500).json({ error: "Unable to evaluate this attempt right now. Please try again." });
