@@ -1,5 +1,5 @@
 const PRIMARY_MODEL = process.env.GEMINI_EVAL_MODEL || "gemini-3.8-flash";
-const FALLBACK_MODELS = [PRIMARY_MODEL, "gemini-3.7-flash", "gemini-3.6-flash", "gemini-3.5-flash-lite"].filter((v, i, a) => v && a.indexOf(v) === i);
+const FALLBACK_MODELS = [PRIMARY_MODEL, "gemini-3.7-flash", "gemini-3.6-flash", "gemini-3.5-flash", "gemini-2.5-flash", "gemini-2.5-flash-lite"].filter((v, i, a) => v && a.indexOf(v) === i);
 
 function clamp(n, min, max) {
   return Math.max(min, Math.min(max, Number(n) || 0));
@@ -64,7 +64,7 @@ function isRetryableError(status, data) {
 async function callGemini(model, prompt) {
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(process.env.GEMINI_API_KEY)}`;
   for (let attempt = 0; attempt < 2; attempt++) {
-    const response = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ contents: [{ role: "user", parts: [{ text: prompt }] }], generationConfig: { responseMimeType: "application/json", responseSchema, temperature: 0.15, maxOutputTokens: 9000 } }) });
+    const response = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ contents: [{ role: "user", parts: [{ text: prompt }] }], generationConfig: { responseMimeType: "application/json", responseSchema, maxOutputTokens: 9000 } }) });
     const data = await response.json();
     if (response.ok) return { data, model };
     if (!isRetryableError(response.status, data) || attempt === 1) return { error: data?.error?.message || "Gemini evaluation failed.", status: response.status };
@@ -91,8 +91,10 @@ FINAL FEEDBACK — give a concise overall diagnosis and 3-5 priority improvement
 
 Return only JSON matching the supplied schema. TEST DATA: ${JSON.stringify(payload)}`;
   try {
+    let lastError = "";
     for (const model of FALLBACK_MODELS) {
       const result = await callGemini(model, prompt);
+      if (result.error) lastError = `${model}: ${result.error}`;
       if (result.data) {
         const text = result.data?.candidates?.[0]?.content?.parts?.map(p => p.text || "").join("").trim();
         if (!text) continue;
@@ -101,11 +103,13 @@ Return only JSON matching the supplied schema. TEST DATA: ${JSON.stringify(paylo
           if (!Array.isArray(parsed.comprehension) || parsed.comprehension.length < 5) continue;
           return res.status(200).json({ evaluation: normalise(parsed, compAnswers.slice(0, 5)), model, provider: "Google Gemini" });
         } catch (parseError) {
+          lastError = `${model}: Gemini returned invalid JSON`;
           continue;
         }
       }
     }
-    return res.status(503).json({ error: "Gemini is temporarily busy. Please try the evaluation again in a few seconds." });
+    console.error("All Gemini evaluation models failed:", lastError);
+    return res.status(503).json({ error: "AI evaluation is temporarily unavailable. Please try again in a few seconds." });
   } catch (error) {
     console.error("Gemini evaluation error", error);
     return res.status(500).json({ error: "Unable to evaluate this attempt right now. Please try again." });
