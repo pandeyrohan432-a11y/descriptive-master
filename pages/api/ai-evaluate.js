@@ -1,5 +1,12 @@
-const PRIMARY_MODEL = process.env.GEMINI_EVAL_MODEL || "gemini-3.8-flash";
-const FALLBACK_MODELS = [PRIMARY_MODEL, "gemini-3.7-flash", "gemini-3.6-flash", "gemini-3.5-flash", "gemini-2.5-flash", "gemini-2.5-flash-lite"].filter((v, i, a) => v && a.indexOf(v) === i);
+const PRIMARY_MODEL = process.env.GEMINI_EVAL_MODEL || "gemini-3.5-flash-lite";
+const FALLBACK_MODELS = [
+  PRIMARY_MODEL,
+  "gemini-3.8-flash",
+  "gemini-3.7-flash",
+  "gemini-3.6-flash",
+  "gemini-3.5-flash",
+  "gemini-3.1-flash-lite"
+].filter((v, i, a) => v && a.indexOf(v) === i);
 
 function clamp(n, min, max) {
   return Math.max(min, Math.min(max, Number(n) || 0));
