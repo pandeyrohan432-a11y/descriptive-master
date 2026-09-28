@@ -1,0 +1,1 @@
+import ComputerMockPage from "../components/ComputerMockPage";import data from "../data/computer-mock-3";export default function ComputerMock3(){return <ComputerMockPage title="Mock Test 3" b64={data} storageKey="dm_computer_mock_3_attempt"/>}
