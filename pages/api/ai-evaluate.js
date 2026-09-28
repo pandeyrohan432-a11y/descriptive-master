@@ -1,12 +1,11 @@
-const PRIMARY_MODEL = process.env.GEMINI_EVAL_MODEL || "gemini-3.5-flash-lite";
+// Use only currently supported stable Gemini 3 models. Avoid retired/preview models.
 const FALLBACK_MODELS = [
-  PRIMARY_MODEL,
-  "gemini-3.8-flash",
-  "gemini-3.7-flash",
-  "gemini-3.6-flash",
+  "gemini-3.5-flash-lite",
   "gemini-3.5-flash",
-  "gemini-3.1-flash-lite"
-].filter((v, i, a) => v && a.indexOf(v) === i);
+  "gemini-3.6-flash",
+  "gemini-3.7-flash",
+  "gemini-3.8-flash"
+];
 
 function clamp(n, min, max) {
   return Math.max(min, Math.min(max, Number(n) || 0));
@@ -82,21 +81,21 @@ async function callGemini(model, prompt) {
       generationConfig: {
         responseMimeType: "application/json",
         responseSchema,
-        maxOutputTokens: 9000
+        maxOutputTokens: 6000
       }
     },
     {
       ...baseBody,
       generationConfig: {
         responseMimeType: "application/json",
-        maxOutputTokens: 9000
+        maxOutputTokens: 6000
       }
     }
   ];
 
   let lastError = "";
   for (let bodyIndex = 0; bodyIndex < bodies.length; bodyIndex++) {
-    for (let attempt = 0; attempt < 2; attempt++) {
+    for (let attempt = 0; attempt < 3; attempt++) {
       const response = await fetch(url, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -118,10 +117,10 @@ async function callGemini(model, prompt) {
       const schemaFallback = bodyIndex === 0 && response.status === 400;
       if (schemaFallback) break;
 
-      if (!isRetryableError(response.status, data) || attempt === 1) {
+      if (!isRetryableError(response.status, data) || attempt === 2) {
         return { error: lastError, status: response.status };
       }
-      await new Promise(resolve => setTimeout(resolve, 1200));
+      await new Promise(resolve => setTimeout(resolve, 1500 * (attempt + 1)));
     }
   }
 
