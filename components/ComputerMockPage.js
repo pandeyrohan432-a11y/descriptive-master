@@ -5,7 +5,8 @@ const css=`*{box-sizing:border-box}body{margin:0;font-family:Inter,Arial,sans-se
 async function decodeData(b64){const bin=atob(b64);const bytes=Uint8Array.from(bin,c=>c.charCodeAt(0));const ds=new DecompressionStream("gzip");const out=await new Response(new Blob([bytes]).stream().pipeThrough(ds)).text();return JSON.parse(out)}
 
 export default function ComputerMockPage({title,b64,storageKey}){
- const [Q,setQ]=useState(null),[started,setStarted]=useState(false),[paused,setPaused]=useState(false),[i,setI]=useState(0),[ans,setAns]=useState({}),[time,setTime]=useState(900),[done,setDone]=useState(false),[previous,setPrevious]=useState(null),[leaveOpen,setLeaveOpen]=useState(false);\n const deadlineRef=useRef(null);
+ const [Q,setQ]=useState(null),[started,setStarted]=useState(false),[paused,setPaused]=useState(false),[i,setI]=useState(0),[ans,setAns]=useState({}),[time,setTime]=useState(900),[done,setDone]=useState(false),[previous,setPrevious]=useState(null),[leaveOpen,setLeaveOpen]=useState(false);
+ const deadlineRef=useRef(null);
  useEffect(()=>{decodeData(b64).then(setQ).catch(()=>setQ([]));try{const s=localStorage.getItem(storageKey);if(s){const p=JSON.parse(s);setPrevious(p);if(p.status==="in-progress"){setAns(p.answers||{});setI(Number(p.currentIndex)||0);setTime(Number(p.time)>0?Number(p.time):900);}}}catch(e){}},[b64,storageKey]);
  useEffect(()=>{if(!started||done||paused)return;deadlineRef.current=Date.now()+Math.max(0,time)*1000;const tick=()=>{const remaining=Math.max(0,Math.ceil((deadlineRef.current-Date.now())/1000));setTime(remaining)};tick();const t=setInterval(tick,250);return()=>clearInterval(t)},[started,done,paused]);
  useEffect(()=>{if(!started||done)return;const save=()=>{try{localStorage.setItem(storageKey,JSON.stringify({status:"in-progress",answers:ans,currentIndex:i,time,updatedAt:new Date().toISOString()}))}catch(e){}};save()},[started,done,ans,i,time,storageKey]);
