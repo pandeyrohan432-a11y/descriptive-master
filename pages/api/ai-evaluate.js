@@ -1,5 +1,5 @@
-const PRIMARY_MODEL = process.env.GEMINI_EVAL_MODEL || "gemini-3.6-flash";
-const FALLBACK_MODELS = [PRIMARY_MODEL, "gemini-2.5-flash", "gemini-2.5-flash-lite"].filter((v, i, a) => v && a.indexOf(v) === i);
+const PRIMARY_MODEL = process.env.GEMINI_EVAL_MODEL || "gemini-3.8-flash";
+const FALLBACK_MODELS = [PRIMARY_MODEL, "gemini-3.7-flash", "gemini-3.6-flash", "gemini-3.5-flash-lite"].filter((v, i, a) => v && a.indexOf(v) === i);
 
 function clamp(n, min, max) {
   return Math.max(min, Math.min(max, Number(n) || 0));
@@ -56,10 +56,9 @@ const responseSchema = { type: "OBJECT", properties: {
   overallFeedback: { type: "STRING" }, keyImprovements: { type: "ARRAY", items: { type: "STRING" } }
 }, required: ["essay", "comprehension", "overallFeedback", "keyImprovements"] };
 
-function isTemporaryCapacityError(status, data) {
+function isRetryableError(status, data) {
   if (![429, 500, 502, 503, 504].includes(status)) return false;
-  const msg = String(data?.error?.message || "").toLowerCase();
-  return status !== 429 || /high demand|overload|capacity|temporar|resource.?exhausted|unavailable|quota/.test(msg);
+  return true;
 }
 
 async function callGemini(model, prompt) {
@@ -68,7 +67,7 @@ async function callGemini(model, prompt) {
     const response = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ contents: [{ role: "user", parts: [{ text: prompt }] }], generationConfig: { responseMimeType: "application/json", responseSchema, temperature: 0.15, maxOutputTokens: 9000 } }) });
     const data = await response.json();
     if (response.ok) return { data, model };
-    if (!isTemporaryCapacityError(response.status, data) || attempt === 1) return { error: data?.error?.message || "Gemini evaluation failed.", status: response.status };
+    if (!isRetryableError(response.status, data) || attempt === 1) return { error: data?.error?.message || "Gemini evaluation failed.", status: response.status };
     await new Promise(resolve => setTimeout(resolve, 1200));
   }
   return { error: "Gemini evaluation failed.", status: 503 };
