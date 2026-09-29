@@ -7,7 +7,7 @@ async function decodeData(b64){const bin=atob(b64);const bytes=Uint8Array.from(b
 export default function ComputerMockPage({title,b64,storageKey}){
  const [Q,setQ]=useState(null),[started,setStarted]=useState(false),[i,setI]=useState(0),[ans,setAns]=useState({}),[time,setTime]=useState(900),[done,setDone]=useState(false),[previous,setPrevious]=useState(null);
  useEffect(()=>{decodeData(b64).then(setQ).catch(()=>setQ([]));try{const s=localStorage.getItem(storageKey);if(s)setPrevious(JSON.parse(s))}catch(e){}},[b64,storageKey]);
- useEffect(()=>{if(!releaseAt)return;const t=setInterval(()=>setReleased(new Date()>=releaseAt),30000);return()=>clearInterval(t)},[releaseAt?.getTime()]);
+ useEffect(()=>{if(!releaseAt)return;const t=setInterval(()=>setReleased(new Date()>=releaseAt),30000);return()=>clearInterval(t)},[releaseAt]);
  useEffect(()=>{if(!started||done)return;const t=setInterval(()=>setTime(v=>Math.max(0,v-1)),1000);return()=>clearInterval(t)},[started,done]);
  const submitAttempt=()=>{const result={answers:ans,submittedAt:new Date().toISOString()};try{localStorage.setItem(storageKey,JSON.stringify(result))}catch(e){}setPrevious(result);setDone(true)};
  const score=useMemo(()=>Q?Q.reduce((s,q,n)=>{const a=ans[n];if(q[1].length>=5)return s+(a===q[2]?1:(a!==undefined?-0.25:0));return s+(a!==undefined&&String(a).trim().toLowerCase()===String(q[2]).trim().toLowerCase()?1:(a!==undefined?-0.25:0))},0):0,[Q,ans]);
