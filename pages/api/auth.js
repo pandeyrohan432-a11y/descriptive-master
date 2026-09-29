@@ -14,7 +14,7 @@ export default async function handler(req,res){
     if(action==="logout"){await clearSession(req,res);return res.status(200).json({ok:true});}
     if(action==="signup"){
       const name=String(req.body?.name||"").trim().slice(0,100);
-      const phone=cleanPhone(req.body?.phone);
+      const phone=cleanPhone(req.body?.phone);\n      if(!/^[6-9]\\d{9}$/.test(phone)||/^([6-9])\\1{9}$/.test(phone)||phone==="1234567890"||phone==="9876543210")return res.status(400).json({error:"Enter a real 10-digit Indian mobile number"});
       const email=String(req.body?.email||"").trim().toLowerCase().slice(0,200);
       const password=String(req.body?.password||"");
       const examTarget=String(req.body?.examTarget||"Banking").trim().slice(0,80)||"Banking";
