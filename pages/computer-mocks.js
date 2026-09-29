@@ -20,9 +20,9 @@ export default function ComputerMocks(){
   </div>
   <div className="grid">
    {Array.from({length:17},(_,i)=>{
-    const n=i+1,done=attempted[n],comingSoon=n>=4;
+    const n=i+1,done=attempted[n];\n    const releaseAt=new Date(`2026-10-${String(n+1).padStart(2,"0")}T00:00:00+05:30`);\n    const locked=new Date()<releaseAt;\n    const releaseLabel=releaseAt.toLocaleDateString("en-IN",{day:"numeric",month:"short",timeZone:"Asia/Kolkata"});
     return <div className="card" key={n}>
-     <span className="badge">{comingSoon?"COMING SOON":done?"ATTEMPTED":"AVAILABLE"}</span>
+     <span className="badge">{locked?"COMING SOON":done?"ATTEMPTED":"AVAILABLE"}</span>
      <h3>Mock Test {n}</h3>
      {comingSoon
       ? <button className="btn" disabled style={{opacity:.55,cursor:"not-allowed"}}>Coming Soon</button>
