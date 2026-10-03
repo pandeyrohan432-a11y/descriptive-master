@@ -22,7 +22,7 @@ export default function ComputerMocks(){
    {Array.from({length:17},(_,i)=>{
     const n=i+1;
     const done=attempted[n];
-    const releaseAt=new Date(`2026-10-${String(n+1).padStart(2,"0")}T00:00:00+05:30`);
+    const releaseAt=new Date(`2026-10-${String(n+4).padStart(2,"0")}T00:00:00+05:30`);
     const locked=n<=3 ? true : new Date()<releaseAt;
     const releaseLabel=releaseAt.toLocaleDateString("en-IN",{day:"numeric",month:"short",timeZone:"Asia/Kolkata"});
     return <div className="card" key={n}>
