@@ -50,7 +50,7 @@ const css=`*{box-sizing:border-box}body{margin:0;font-family:Inter,Arial,sans-se
 export default function ComputerMock1(){
  const [released,setReleased]=useState(new Date()>=RELEASE_AT);
  useEffect(()=>{const t=setInterval(()=>setReleased(new Date()>=RELEASE_AT),30000);return()=>clearInterval(t)},[]);
- const [started,setStarted]=useState(false),[i,setI]=useState(0),[ans,setAns]=useState({}),[mark,setMark]=useState({}),[time,setTime]=useState(900),[done,setDone]=useState(false),[previous,setPrevious]=useState(null);
+ const [started,setStarted]=useState(false),[i,setI]=useState(0),[ans,setAns]=useState({}),[mark,setMark]=useState({}),[time,setTime]=useState(900),[done,setDone]=useState(false),[previous,setPrevious]=useState(null),[solI,setSolI]=useState(0);
  useEffect(()=>{try{const saved=window.localStorage.getItem("dm_computer_mock_1_rrb_generations_attempt");if(saved)setPrevious(JSON.parse(saved))}catch(e){}},[]);
  useEffect(()=>{if(!started||done)return;const t=setInterval(()=>setTime(v=>Math.max(0,v-1)),1000);return()=>clearInterval(t)},[started,done]);
  useEffect(()=>{if(started&&!done&&time===0)submitAttempt()},[time,started,done]);
@@ -62,7 +62,6 @@ export default function ComputerMock1(){
  if(!started&&!previous)return <div className="page"><style>{css}</style><div className="intro"><div className="introCard"><button className="back" onClick={()=>window.location.href="/paired-home"}>← Back to Mock Tests</button><div className="kicker">COMPUTER AWARENESS</div><h1>Mock Test 1</h1><p className="muted">Exam-style Computer Awareness practice based on the prepared Mock Test 1 question set.</p><div className="stats"><div><b>40</b><small>Questions</small></div><div><b>15 min</b><small>Practice Time</small></div><div><b>40</b><small>Total Marks</small></div></div><div className="instructions"><b>Instructions</b><ul><li>40 multiple-choice questions.</li><li>Select one answer for each question.</li><li>Use the question palette to jump between questions.</li><li>Mark questions for review and change your response anytime before submission.</li><li>After submission, your score and question-wise answers are displayed.</li><li><b>Only one attempt is allowed.</b></li></ul></div><button className="start" onClick={()=>setStarted(true)}>Start Mock Test →</button></div></div></div>;
  if(done||previous){
   const review=done?ans:(previous?.answers||{});
-  const [solI,setSolI]=useState(0);
   const attempted=Object.keys(review).length;
   const correct=Q.reduce((s,q,n)=>s+(review[n]===q[2]?1:0),0);
   const incorrect=Q.reduce((s,q,n)=>s+(review[n]!==undefined&&review[n]!==q[2]?1:0),0);
