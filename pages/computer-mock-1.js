@@ -56,7 +56,35 @@ export default function ComputerMock1(){
  useEffect(()=>{try{const saved=window.localStorage.getItem("dm_computer_mock_1_rrb_generations_attempt");if(saved)setPrevious(JSON.parse(saved))}catch(e){}},[]);
  useEffect(()=>{if(!started||done)return;const t=setInterval(()=>setTime(v=>Math.max(0,v-1)),1000);return()=>clearInterval(t)},[started,done]);
  useEffect(()=>{if(started&&!done&&time===0)submitAttempt()},[time,started,done]);
- const submitAttempt=()=>{const result={answers:ans,submittedAt:new Date().toISOString()};try{window.localStorage.setItem("dm_computer_mock_1_rrb_generations_attempt",JSON.stringify(result))}catch(e){}setPrevious(result);setDone(true)};
+ const submitAttempt=async()=>{
+  const submittedAt=new Date().toISOString();
+  const attemptId="computer-mock-1-"+Date.now()+"-"+Math.random().toString(36).slice(2,8);
+  const attempted=Object.keys(ans).length;
+  const correct=Q.reduce((s,q,n)=>s+(ans[n]===q[2]?1:0),0);
+  const incorrect=Q.reduce((s,q,n)=>s+(ans[n]!==undefined&&ans[n]!==q[2]?1:0),0);
+  const skipped=Q.length-attempted;
+  const finalScore=Q.reduce((s,q,n)=>s+(ans[n]===q[2]?1:(ans[n]!==undefined?-0.25:0)),0);
+  const topics=[
+    {name:"Inventors & Early Computing",from:0,to:9},
+    {name:"Computer Generations",from:10,to:30},
+    {name:"Technology & Evolution",from:31,to:39}
+  ].map(t=>{const total=t.to-t.from+1;const crr=Q.slice(t.from,t.to+1).reduce((s,q,n)=>s+(ans[t.from+n]===q[2]?1:0),0);return {name:t.name,total,correct:crr,pct:total?crr/total*100:0}});
+  const result={answers:ans,submittedAt,attemptId};
+  try{window.localStorage.setItem("dm_computer_mock_1_rrb_generations_attempt",JSON.stringify(result))}catch(e){}
+  try{
+    const session=await fetch("/api/students?me=1");
+    const sd=await session.json();
+    const student=sd.student||{};
+    if(student.phone){
+      await fetch("/api/computer-attempts",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({
+        id:attemptId,phone:student.phone,name:student.name,testNo:1,submittedAt,answers:ans,score:finalScore,
+        attempted,correct,incorrect,skipped,topics,
+        questions:Q.map((q,n)=>({number:n+1,question:q[0],options:q[1],correctAnswer:q[2],correctLetter:String.fromCharCode(65+q[2]),solution:DETAILED_NOTES[n]}))
+      })});
+    }
+  }catch(e){}
+  setPrevious(result);setDone(true)
+};
  const score=useMemo(()=>Q.reduce((s,q,n)=>s+(ans[n]===q[2]?1:(ans[n]!==undefined?-0.25:0)),0),[ans]);
  const reviewAnswers=done?ans:(previous?.answers||{});
  const reviewScore=useMemo(()=>Q.reduce((s,q,n)=>s+(reviewAnswers[n]===q[2]?1:(reviewAnswers[n]!==undefined?-0.25:0)),0),[reviewAnswers]);
