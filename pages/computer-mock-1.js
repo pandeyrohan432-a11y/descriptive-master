@@ -51,10 +51,10 @@ export default function ComputerMock1(){
  const [released,setReleased]=useState(new Date()>=RELEASE_AT);
  useEffect(()=>{const t=setInterval(()=>setReleased(new Date()>=RELEASE_AT),30000);return()=>clearInterval(t)},[]);
  const [started,setStarted]=useState(false),[i,setI]=useState(0),[ans,setAns]=useState({}),[mark,setMark]=useState({}),[time,setTime]=useState(900),[done,setDone]=useState(false),[previous,setPrevious]=useState(null);
- useEffect(()=>{try{const saved=window.localStorage.getItem("dm_computer_mock_1_attempt");if(saved)setPrevious(JSON.parse(saved))}catch(e){}},[]);
+ useEffect(()=>{try{const saved=window.localStorage.getItem("dm_computer_mock_1_rrb_generations_attempt");if(saved)setPrevious(JSON.parse(saved))}catch(e){}},[]);
  useEffect(()=>{if(!started||done)return;const t=setInterval(()=>setTime(v=>Math.max(0,v-1)),1000);return()=>clearInterval(t)},[started,done]);
  useEffect(()=>{if(started&&!done&&time===0)submitAttempt()},[time,started,done]);
- const submitAttempt=()=>{const result={answers:ans,submittedAt:new Date().toISOString()};try{window.localStorage.setItem("dm_computer_mock_1_attempt",JSON.stringify(result))}catch(e){}setPrevious(result);setDone(true)};
+ const submitAttempt=()=>{const result={answers:ans,submittedAt:new Date().toISOString()};try{window.localStorage.setItem("dm_computer_mock_1_rrb_generations_attempt",JSON.stringify(result))}catch(e){}setPrevious(result);setDone(true)};
  const score=useMemo(()=>Q.reduce((s,q,n)=>s+(ans[n]===q[2]?1:(ans[n]!==undefined?-0.25:0)),0),[ans]);
  const reviewAnswers=done?ans:(previous?.answers||{});
  const reviewScore=useMemo(()=>Q.reduce((s,q,n)=>s+(reviewAnswers[n]===q[2]?1:(reviewAnswers[n]!==undefined?-0.25:0)),0),[reviewAnswers]);
