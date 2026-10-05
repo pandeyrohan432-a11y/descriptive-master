@@ -74,6 +74,11 @@ export default async function handler(req,res){
     }
 
     if(req.method==="GET"){
+      if(req.query.me==="1"){
+        const sessionUser=await getSessionUser(req);
+        if(!sessionUser) return res.status(401).json({error:"Unauthorized"});
+        return res.status(200).json({student:sessionUser});
+      }
       if(req.query.phone){
         const phone=cleanPhone(req.query.phone);
         const sessionUser=await getSessionUser(req);
