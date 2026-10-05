@@ -85,6 +85,34 @@ export default function ComputerMock1(){
   }catch(e){}
   setPrevious(result);setDone(true)
 };
+ useEffect(()=>{
+   if(!previous||!previous.answers)return;
+   const sync=async()=>{
+     try{
+       const sentKey="dm_computer_mock_1_server_synced";
+       if(localStorage.getItem(sentKey)===previous.submittedAt)return;
+       const attempted=Object.keys(previous.answers).length;
+       const correct=Q.reduce((s,q,n)=>s+(previous.answers[n]===q[2]?1:0),0);
+       const incorrect=Q.reduce((s,q,n)=>s+(previous.answers[n]!==undefined&&previous.answers[n]!==q[2]?1:0),0);
+       const skipped=Q.length-attempted;
+       const finalScore=Q.reduce((s,q,n)=>s+(previous.answers[n]===q[2]?1:(previous.answers[n]!==undefined?-0.25:0)),0);
+       const topics=[
+         {name:"Inventors & Early Computing",from:0,to:9},
+         {name:"Computer Generations",from:10,to:30},
+         {name:"Technology & Evolution",from:31,to:39}
+       ].map(t=>{const total=t.to-t.from+1;const crr=Q.slice(t.from,t.to+1).reduce((s,q,n)=>s+(previous.answers[t.from+n]===q[2]?1:0),0);return {name:t.name,total,correct:crr,pct:total?crr/total*100:0}});
+       const session=await fetch("/api/students?me=1"); const sd=await session.json(); const student=sd.student||{};
+       if(!student.phone)return;
+       const attemptId=previous.attemptId||("computer-mock-1-"+Date.now()+"-"+Math.random().toString(36).slice(2,8));
+       const response=await fetch("/api/computer-attempts",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({
+         id:attemptId,phone:student.phone,name:student.name,testNo:1,submittedAt:previous.submittedAt,answers:previous.answers,score:finalScore,attempted,correct,incorrect,skipped,topics,
+         questions:Q.map((q,n)=>({number:n+1,question:q[0],options:q[1],correctAnswer:q[2],correctLetter:String.fromCharCode(65+q[2]),solution:DETAILED_NOTES[n]}))
+       })});
+       if(response.ok)localStorage.setItem(sentKey,previous.submittedAt);
+     }catch(e){}
+   };
+   sync();
+ },[previous]);
  const score=useMemo(()=>Q.reduce((s,q,n)=>s+(ans[n]===q[2]?1:(ans[n]!==undefined?-0.25:0)),0),[ans]);
  const reviewAnswers=done?ans:(previous?.answers||{});
  const reviewScore=useMemo(()=>Q.reduce((s,q,n)=>s+(reviewAnswers[n]===q[2]?1:(reviewAnswers[n]!==undefined?-0.25:0)),0),[reviewAnswers]);
